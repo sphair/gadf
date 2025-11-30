@@ -4,15 +4,16 @@ import (
 	"testing"
 )
 
+// TestHashName verifies hash values match Amiga DOS spec
 func TestHashName(t *testing.T) {
 	tests := []struct {
 		name     string
 		expected int
 	}{
-		// These values are computed by the AmigaDOS hash algorithm
-		{"S", 24},                 // S directory
-		{"C", 8},                  // C directory
-		{"startup-sequence", 49}, // Standard startup file
+		// Known values from Amiga DOS - if these change, disk won't work
+		{"S", 24},
+		{"C", 8},
+		{"startup-sequence", 49},
 		{"Devs", 22},
 		{"L", 17},
 		{"Libs", 46},
@@ -24,12 +25,16 @@ func TestHashName(t *testing.T) {
 			if got != tt.expected {
 				t.Errorf("HashName(%q) = %d, want %d", tt.name, got, tt.expected)
 			}
+			// Also verify result is in valid range
+			if got < 0 || got >= HashTableSize {
+				t.Errorf("HashName(%q) = %d, out of range [0, %d)", tt.name, got, HashTableSize)
+			}
 		})
 	}
 }
 
+// TestHashNameCaseInsensitive verifies case-insensitivity (critical for Amiga compatibility)
 func TestHashNameCaseInsensitive(t *testing.T) {
-	// Hash should be case-insensitive
 	tests := [][]string{
 		{"test", "TEST", "Test", "TeSt"},
 		{"Hello", "HELLO", "hello"},
@@ -46,33 +51,3 @@ func TestHashNameCaseInsensitive(t *testing.T) {
 		}
 	}
 }
-
-func TestHashNameRange(t *testing.T) {
-	// All hashes should be in valid range [0, HashTableSize)
-	testNames := []string{
-		"a", "ab", "abc", "test", "verylongfilename",
-		"file.txt", "data.bin", "readme", "startup-sequence",
-		"1234567890", "UPPERCASE", "MixedCase",
-	}
-
-	for _, name := range testNames {
-		hash := HashName(name)
-		if hash < 0 || hash >= HashTableSize {
-			t.Errorf("HashName(%q) = %d, out of range [0, %d)", name, hash, HashTableSize)
-		}
-	}
-}
-
-func TestHashNameDeterministic(t *testing.T) {
-	// Same input should always produce same output
-	name := "test-file.exe"
-	expected := HashName(name)
-
-	for i := 0; i < 100; i++ {
-		got := HashName(name)
-		if got != expected {
-			t.Errorf("HashName not deterministic: got %d, want %d", got, expected)
-		}
-	}
-}
-

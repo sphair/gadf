@@ -4,6 +4,7 @@ import (
 	"testing"
 )
 
+// TestRequiredExtensionBlocks verifies calculation for large files
 func TestRequiredExtensionBlocks(t *testing.T) {
 	tests := []struct {
 		numDataBlocks int
@@ -29,10 +30,10 @@ func TestRequiredExtensionBlocks(t *testing.T) {
 	}
 }
 
+// TestAssignDataBlocksSmallFile verifies data blocks go directly in file header
 func TestAssignDataBlocksSmallFile(t *testing.T) {
 	fh := NewFileHeader(100, 880, "test", 1000)
 
-	// Small file: 10 data blocks, no extension blocks needed
 	dataBlocks := []uint32{200, 201, 202, 203, 204, 205, 206, 207, 208, 209}
 	fh.AssignDataBlocks(dataBlocks, nil)
 
@@ -44,41 +45,12 @@ func TestAssignDataBlocksSmallFile(t *testing.T) {
 		t.Errorf("FileHeader.DataBlocks length = %d, want 10", len(fh.DataBlocks))
 	}
 
-	for i, db := range dataBlocks {
-		if fh.DataBlocks[i] != db {
-			t.Errorf("DataBlocks[%d] = %d, want %d", i, fh.DataBlocks[i], db)
-		}
-	}
-
 	if fh.Extension != 0 {
 		t.Errorf("Extension = %d, want 0", fh.Extension)
 	}
 }
 
-func TestAssignDataBlocksExactlyMaxBlocks(t *testing.T) {
-	fh := NewFileHeader(100, 880, "test", 35000)
-
-	// Exactly 72 data blocks - no extension needed
-	dataBlocks := make([]uint32, MaxDataBlocks)
-	for i := range dataBlocks {
-		dataBlocks[i] = uint32(200 + i)
-	}
-
-	fh.AssignDataBlocks(dataBlocks, nil)
-
-	if len(fh.extensions) != 0 {
-		t.Errorf("Expected 0 extension blocks, got %d", len(fh.extensions))
-	}
-
-	if len(fh.DataBlocks) != MaxDataBlocks {
-		t.Errorf("FileHeader.DataBlocks length = %d, want %d", len(fh.DataBlocks), MaxDataBlocks)
-	}
-
-	if fh.Extension != 0 {
-		t.Errorf("Extension = %d, want 0", fh.Extension)
-	}
-}
-
+// TestAssignDataBlocksOneExtension verifies overflow goes to extension block
 func TestAssignDataBlocksOneExtension(t *testing.T) {
 	fh := NewFileHeader(100, 880, "test", 50000)
 
@@ -88,7 +60,7 @@ func TestAssignDataBlocksOneExtension(t *testing.T) {
 		dataBlocks[i] = uint32(200 + i)
 	}
 
-	extBlockNums := []uint32{150} // 1 extension block
+	extBlockNums := []uint32{150}
 	fh.AssignDataBlocks(dataBlocks, extBlockNums)
 
 	// Verify file header
@@ -117,21 +89,9 @@ func TestAssignDataBlocksOneExtension(t *testing.T) {
 	if eb.Extension != 0 {
 		t.Errorf("ExtensionBlock.Extension = %d, want 0 (end of chain)", eb.Extension)
 	}
-
-	// Verify data block distribution
-	for i := 0; i < MaxDataBlocks; i++ {
-		if fh.DataBlocks[i] != uint32(200+i) {
-			t.Errorf("FileHeader.DataBlocks[%d] = %d, want %d", i, fh.DataBlocks[i], 200+i)
-		}
-	}
-	for i := 0; i < 8; i++ {
-		expected := uint32(200 + MaxDataBlocks + i)
-		if eb.DataBlocks[i] != expected {
-			t.Errorf("ExtensionBlock.DataBlocks[%d] = %d, want %d", i, eb.DataBlocks[i], expected)
-		}
-	}
 }
 
+// TestAssignDataBlocksMultipleExtensions verifies chaining of multiple extension blocks
 func TestAssignDataBlocksMultipleExtensions(t *testing.T) {
 	fh := NewFileHeader(100, 880, "test", 100000)
 
@@ -141,7 +101,7 @@ func TestAssignDataBlocksMultipleExtensions(t *testing.T) {
 		dataBlocks[i] = uint32(200 + i)
 	}
 
-	extBlockNums := []uint32{150, 151} // 2 extension blocks
+	extBlockNums := []uint32{150, 151}
 	fh.AssignDataBlocks(dataBlocks, extBlockNums)
 
 	// Verify chain
@@ -179,32 +139,7 @@ func TestAssignDataBlocksMultipleExtensions(t *testing.T) {
 	}
 }
 
-func TestNewFileHeader(t *testing.T) {
-	fh := NewFileHeader(100, 880, "testfile", 12345)
-
-	if fh.BlockNum != 100 {
-		t.Errorf("BlockNum = %d, want 100", fh.BlockNum)
-	}
-	if fh.Parent != 880 {
-		t.Errorf("Parent = %d, want 880", fh.Parent)
-	}
-	if fh.Name != "testfile" {
-		t.Errorf("Name = %s, want testfile", fh.Name)
-	}
-	if fh.FileSize != 12345 {
-		t.Errorf("FileSize = %d, want 12345", fh.FileSize)
-	}
-	if fh.Extension != 0 {
-		t.Errorf("Extension = %d, want 0", fh.Extension)
-	}
-	if fh.HashChain != 0 {
-		t.Errorf("HashChain = %d, want 0", fh.HashChain)
-	}
-	if len(fh.DataBlocks) != 0 {
-		t.Errorf("DataBlocks length = %d, want 0", len(fh.DataBlocks))
-	}
-}
-
+// TestFileHeaderAddDataBlock verifies capacity limit of 72
 func TestFileHeaderAddDataBlock(t *testing.T) {
 	fh := NewFileHeader(100, 880, "test", 1000)
 

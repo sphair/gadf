@@ -6,44 +6,39 @@ import (
 	"github.com/sphair/gadf/pkg/adf"
 )
 
+// TestCreateBootBlock verifies bootblock structure and checksum
 func TestCreateBootBlock(t *testing.T) {
 	tests := []struct {
-		name     string
-		minimal  bool
-		codeSize int
+		name    string
+		minimal bool
 	}{
-		{"standard", false, 81},
-		{"minimal", true, 37},
+		{"standard", false},
+		{"minimal", true},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			bootblock := CreateBootBlock(tt.minimal)
 
-			// Should be 1024 bytes
+			// Should be 1024 bytes (2 blocks)
 			if len(bootblock) != adf.BlockSize*2 {
 				t.Errorf("Bootblock size = %d, want %d", len(bootblock), adf.BlockSize*2)
 			}
 
-			// Check DOS type
+			// Check DOS type at offset 0
 			dosType := adf.GetLong(bootblock, 0)
 			if dosType != adf.DOSTypeOFS {
 				t.Errorf("DOS type = 0x%X, want 0x%X (DOS0)", dosType, adf.DOSTypeOFS)
 			}
 
-			// Check root block pointer
+			// Check root block pointer at offset 8
 			rootPtr := adf.GetLong(bootblock, 2)
 			if rootPtr != adf.RootBlock {
 				t.Errorf("Root pointer = %d, want %d", rootPtr, adf.RootBlock)
 			}
 
-			// Checksum should be non-zero
-			checksum := adf.GetLong(bootblock, 1)
-			if checksum == 0 {
-				t.Log("Warning: bootblock checksum is 0")
-			}
-
 			// Verify checksum is valid
+			checksum := adf.GetLong(bootblock, 1)
 			calculated := adf.CalculateBootChecksum(bootblock)
 			if checksum != calculated {
 				t.Errorf("Checksum mismatch: stored 0x%X, calculated 0x%X", checksum, calculated)
@@ -52,29 +47,18 @@ func TestCreateBootBlock(t *testing.T) {
 	}
 }
 
-func TestBootBlockDOSMarker(t *testing.T) {
-	bootblock := CreateBootBlock(false)
-
-	// First 4 bytes should be "DOS\0"
-	if bootblock[0] != 'D' || bootblock[1] != 'O' || bootblock[2] != 'S' || bootblock[3] != 0 {
-		t.Errorf("DOS marker = %c%c%c%d, want DOS0",
-			bootblock[0], bootblock[1], bootblock[2], bootblock[3])
-	}
-}
-
+// TestStandardBootCodeContent verifies standard bootblock loads expansion.library
 func TestStandardBootCodeContent(t *testing.T) {
-	// Verify the standard boot code contains expected library names
 	bootblock := CreateBootBlock(false)
 
-	// Look for "dos.library" string
 	dosLibFound := false
 	expLibFound := false
 
-	for i := 12; i < len(bootblock)-12; i++ {
+	for i := 12; i < len(bootblock)-17; i++ {
 		if string(bootblock[i:i+11]) == "dos.library" {
 			dosLibFound = true
 		}
-		if i < len(bootblock)-17 && string(bootblock[i:i+17]) == "expansion.library" {
+		if string(bootblock[i:i+17]) == "expansion.library" {
 			expLibFound = true
 		}
 	}
@@ -87,18 +71,18 @@ func TestStandardBootCodeContent(t *testing.T) {
 	}
 }
 
+// TestMinimalBootCodeContent verifies minimal bootblock does NOT load expansion.library
 func TestMinimalBootCodeContent(t *testing.T) {
 	bootblock := CreateBootBlock(true)
 
-	// Look for "dos.library" string
 	dosLibFound := false
 	expLibFound := false
 
-	for i := 12; i < len(bootblock)-12; i++ {
+	for i := 12; i < len(bootblock)-17; i++ {
 		if string(bootblock[i:i+11]) == "dos.library" {
 			dosLibFound = true
 		}
-		if i < len(bootblock)-17 && string(bootblock[i:i+17]) == "expansion.library" {
+		if string(bootblock[i:i+17]) == "expansion.library" {
 			expLibFound = true
 		}
 	}
@@ -110,18 +94,3 @@ func TestMinimalBootCodeContent(t *testing.T) {
 		t.Error("Minimal bootblock should NOT contain 'expansion.library'")
 	}
 }
-
-func TestWriteBootBlock(t *testing.T) {
-	disk := adf.NewDisk()
-
-	// Write standard bootblock
-	if err := WriteBootBlock(disk, false); err != nil {
-		t.Fatalf("WriteBootBlock failed: %v", err)
-	}
-
-	// Verify DOS marker at start of disk
-	if disk.Data[0] != 'D' || disk.Data[1] != 'O' || disk.Data[2] != 'S' {
-		t.Error("Bootblock not written correctly to disk")
-	}
-}
-

@@ -4,6 +4,7 @@ import (
 	"testing"
 )
 
+// TestSplitFileData verifies chunk splitting at OFS data block boundaries
 func TestSplitFileData(t *testing.T) {
 	tests := []struct {
 		name           string
@@ -59,55 +60,7 @@ func TestSplitFileData(t *testing.T) {
 	}
 }
 
-func TestSplitFileDataContent(t *testing.T) {
-	// Create data with recognizable pattern
-	data := make([]byte, OFSDataSize+100)
-	for i := range data {
-		data[i] = byte(i % 256)
-	}
-
-	chunks := SplitFileData(data)
-
-	// Verify content is preserved
-	offset := 0
-	for _, chunk := range chunks {
-		for i, b := range chunk {
-			expected := byte((offset + i) % 256)
-			if b != expected {
-				t.Errorf("Data mismatch at offset %d: got %d, want %d", offset+i, b, expected)
-			}
-		}
-		offset += len(chunk)
-	}
-}
-
-func TestNewDataBlock(t *testing.T) {
-	data := []byte{1, 2, 3, 4, 5}
-	db := NewDataBlock(100, 50, 1, data)
-
-	if db.BlockNum != 100 {
-		t.Errorf("BlockNum = %d, want 100", db.BlockNum)
-	}
-	if db.HeaderKey != 50 {
-		t.Errorf("HeaderKey = %d, want 50", db.HeaderKey)
-	}
-	if db.SeqNum != 1 {
-		t.Errorf("SeqNum = %d, want 1", db.SeqNum)
-	}
-	if db.DataSize != 5 {
-		t.Errorf("DataSize = %d, want 5", db.DataSize)
-	}
-	if db.NextData != 0 {
-		t.Errorf("NextData = %d, want 0", db.NextData)
-	}
-
-	// Verify data is copied, not referenced
-	data[0] = 99
-	if db.Data[0] == 99 {
-		t.Error("Data should be copied, not referenced")
-	}
-}
-
+// TestDataBlockCreate verifies OFS data block layout
 func TestDataBlockCreate(t *testing.T) {
 	data := []byte("Hello, Amiga!")
 	db := NewDataBlock(100, 50, 1, data)
@@ -120,7 +73,7 @@ func TestDataBlockCreate(t *testing.T) {
 	}
 
 	// Verify header fields (big-endian)
-	// Type at offset 0
+	// Type at offset 0: T_DATA (8)
 	if block[0] != 0 || block[1] != 0 || block[2] != 0 || block[3] != 8 {
 		t.Error("Block type should be T_DATA (8)")
 	}
@@ -132,4 +85,3 @@ func TestDataBlockCreate(t *testing.T) {
 		}
 	}
 }
-

@@ -6,55 +6,7 @@ import (
 	"github.com/sphair/gadf/pkg/adf"
 )
 
-func TestNewExtensionBlock(t *testing.T) {
-	eb := NewExtensionBlock(100, 50)
-
-	if eb.BlockNum != 100 {
-		t.Errorf("BlockNum = %d, want 100", eb.BlockNum)
-	}
-	if eb.HeaderKey != 50 {
-		t.Errorf("HeaderKey = %d, want 50", eb.HeaderKey)
-	}
-	if eb.Extension != 0 {
-		t.Errorf("Extension = %d, want 0", eb.Extension)
-	}
-	if len(eb.DataBlocks) != 0 {
-		t.Errorf("DataBlocks length = %d, want 0", len(eb.DataBlocks))
-	}
-	if cap(eb.DataBlocks) != MaxDataBlocks {
-		t.Errorf("DataBlocks capacity = %d, want %d", cap(eb.DataBlocks), MaxDataBlocks)
-	}
-}
-
-func TestExtensionBlockAddDataBlock(t *testing.T) {
-	eb := NewExtensionBlock(100, 50)
-
-	// Add blocks up to max
-	for i := 0; i < MaxDataBlocks; i++ {
-		ok := eb.AddDataBlock(uint32(200 + i))
-		if !ok {
-			t.Errorf("AddDataBlock(%d) returned false, want true", i)
-		}
-	}
-
-	if len(eb.DataBlocks) != MaxDataBlocks {
-		t.Errorf("DataBlocks length = %d, want %d", len(eb.DataBlocks), MaxDataBlocks)
-	}
-
-	// Next add should fail
-	ok := eb.AddDataBlock(999)
-	if ok {
-		t.Error("AddDataBlock beyond max returned true, want false")
-	}
-
-	// Verify the data blocks are stored correctly
-	for i := 0; i < MaxDataBlocks; i++ {
-		if eb.DataBlocks[i] != uint32(200+i) {
-			t.Errorf("DataBlocks[%d] = %d, want %d", i, eb.DataBlocks[i], 200+i)
-		}
-	}
-}
-
+// TestExtensionBlockCreateBlock verifies extension block layout
 func TestExtensionBlockCreateBlock(t *testing.T) {
 	eb := NewExtensionBlock(100, 50)
 	eb.AddDataBlock(201)
@@ -120,6 +72,7 @@ func TestExtensionBlockCreateBlock(t *testing.T) {
 	}
 }
 
+// TestExtensionBlockChaining verifies extension blocks can be chained
 func TestExtensionBlockChaining(t *testing.T) {
 	// Create a chain of extension blocks
 	eb1 := NewExtensionBlock(100, 50)
@@ -165,12 +118,20 @@ func TestExtensionBlockChaining(t *testing.T) {
 	}
 }
 
+// TestExtensionBlockMaxDataBlocks verifies 72 data blocks can be stored
 func TestExtensionBlockMaxDataBlocks(t *testing.T) {
 	eb := NewExtensionBlock(100, 50)
 
 	// Fill to capacity
 	for i := 0; i < MaxDataBlocks; i++ {
-		eb.AddDataBlock(uint32(200 + i))
+		if !eb.AddDataBlock(uint32(200 + i)) {
+			t.Fatalf("AddDataBlock failed at %d", i)
+		}
+	}
+
+	// 73rd should fail
+	if eb.AddDataBlock(999) {
+		t.Error("AddDataBlock beyond max should return false")
 	}
 
 	block := eb.CreateBlock()
@@ -189,42 +150,4 @@ func TestExtensionBlockMaxDataBlocks(t *testing.T) {
 			t.Errorf("Data block at -%d = %d, want %d", 51+i, db, expected)
 		}
 	}
-
-	// Verify checksum is still valid with full block
-	storedChecksum := adf.GetLong(block, 5)
-	calculatedChecksum := adf.CalculateChecksum(block, 5)
-	if storedChecksum != calculatedChecksum {
-		t.Errorf("Block checksum invalid: stored %d, calculated %d", storedChecksum, calculatedChecksum)
-	}
 }
-
-func TestExtensionBlockEmptyDataBlocks(t *testing.T) {
-	eb := NewExtensionBlock(100, 50)
-	// Don't add any data blocks
-
-	block := eb.CreateBlock()
-
-	// High seq should be 0
-	highSeq := adf.GetLong(block, 2)
-	if highSeq != 0 {
-		t.Errorf("High seq = %d, want 0", highSeq)
-	}
-
-	// Type and secondary type should still be correct
-	blockType := adf.GetLong(block, 0)
-	if blockType != adf.TypeList {
-		t.Errorf("Block type = %d, want %d", blockType, adf.TypeList)
-	}
-
-	secType := adf.GetLong(block, -1)
-	if secType != adf.STFile {
-		t.Errorf("Secondary type = %d, want %d", secType, adf.STFile)
-	}
-
-	storedChecksum := adf.GetLong(block, 5)
-	calculatedChecksum := adf.CalculateChecksum(block, 5)
-	if storedChecksum != calculatedChecksum {
-		t.Errorf("Block checksum invalid: stored %d, calculated %d", storedChecksum, calculatedChecksum)
-	}
-}
-

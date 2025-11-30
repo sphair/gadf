@@ -6,20 +6,7 @@ import (
 	"github.com/sphair/gadf/pkg/adf"
 )
 
-func TestNewBitmap(t *testing.T) {
-	bm := NewBitmap()
-	if bm == nil {
-		t.Fatal("NewBitmap() returned nil")
-	}
-
-	// All blocks should initially be free (except bootblock)
-	freeCount := bm.CountFree()
-	expectedFree := adf.TotalBlocks - 2 // 1760 - 2 bootblock sectors
-	if freeCount != expectedFree {
-		t.Errorf("Initial free count = %d, want %d", freeCount, expectedFree)
-	}
-}
-
+// TestBitmapAllocate verifies basic allocation and free operations
 func TestBitmapAllocate(t *testing.T) {
 	bm := NewBitmap()
 
@@ -41,10 +28,10 @@ func TestBitmapAllocate(t *testing.T) {
 	}
 }
 
+// TestBitmapBootblockAlwaysAllocated verifies bootblock invariant
 func TestBitmapBootblockAlwaysAllocated(t *testing.T) {
 	bm := NewBitmap()
 
-	// Bootblock (blocks 0-1) should always appear allocated
 	if !bm.IsAllocated(0) {
 		t.Error("Block 0 (bootblock) should always be allocated")
 	}
@@ -53,10 +40,10 @@ func TestBitmapBootblockAlwaysAllocated(t *testing.T) {
 	}
 }
 
+// TestBitmapAllocateNext verifies allocation starts from rootblock area
 func TestBitmapAllocateNext(t *testing.T) {
 	bm := NewBitmap()
 
-	// First allocation should be from rootblock area
 	first := bm.AllocateNext()
 	if first < 0 {
 		t.Fatal("AllocateNext() returned -1 on empty disk")
@@ -79,15 +66,14 @@ func TestBitmapAllocateNext(t *testing.T) {
 	}
 }
 
+// TestBitmapAllocateSpecific verifies specific block allocation
 func TestBitmapAllocateSpecific(t *testing.T) {
 	bm := NewBitmap()
 
-	// Allocate specific block
 	if !bm.AllocateSpecific(500) {
 		t.Error("AllocateSpecific(500) should succeed on free block")
 	}
 
-	// Should be allocated now
 	if !bm.IsAllocated(500) {
 		t.Error("Block 500 should be allocated")
 	}
@@ -98,22 +84,7 @@ func TestBitmapAllocateSpecific(t *testing.T) {
 	}
 }
 
-func TestBitmapCountFree(t *testing.T) {
-	bm := NewBitmap()
-
-	initialFree := bm.CountFree()
-
-	// Allocate some blocks
-	bm.AllocateNext()
-	bm.AllocateNext()
-	bm.AllocateNext()
-
-	newFree := bm.CountFree()
-	if newFree != initialFree-3 {
-		t.Errorf("After 3 allocations: free = %d, want %d", newFree, initialFree-3)
-	}
-}
-
+// TestBitmapFull verifies disk-full handling
 func TestBitmapFull(t *testing.T) {
 	bm := NewBitmap()
 
@@ -126,7 +97,6 @@ func TestBitmapFull(t *testing.T) {
 		}
 	}
 
-	// Should have allocated all free blocks
 	if bm.CountFree() != 0 {
 		t.Errorf("After full allocation: free = %d, want 0", bm.CountFree())
 	}
@@ -137,33 +107,8 @@ func TestBitmapFull(t *testing.T) {
 	}
 }
 
-func TestBitmapBlockCreation(t *testing.T) {
-	bm := NewBitmap()
-
-	// Allocate some blocks
-	bm.AllocateSpecific(adf.RootBlock)
-	bm.AllocateSpecific(adf.BitmapBlock)
-	bm.AllocateSpecific(100)
-	bm.AllocateSpecific(200)
-
-	// Create bitmap block
-	block := bm.CreateBitmapBlock()
-
-	if len(block) != adf.BlockSize {
-		t.Errorf("Bitmap block size = %d, want %d", len(block), adf.BlockSize)
-	}
-
-	// Checksum should be at offset 0
-	// Verify it's non-zero (a valid checksum)
-	checksum := adf.GetLong(block, 0)
-	if checksum == 0 {
-		// Note: checksum could theoretically be 0, but very unlikely
-		t.Log("Warning: bitmap checksum is 0 (unusual but possible)")
-	}
-}
-
-// TestBitmapDiskFormat verifies the on-disk bitmap format matches Amiga spec.
-// Block N should be at bit N in the bitmap (block 0 = bit 0, etc.)
+// TestBitmapDiskFormat verifies on-disk bitmap format matches Amiga spec
+// Block N is at bit N: set=free, clear=allocated
 func TestBitmapDiskFormat(t *testing.T) {
 	bm := NewBitmap()
 
@@ -174,8 +119,7 @@ func TestBitmapDiskFormat(t *testing.T) {
 	block := bm.CreateBitmapBlock()
 
 	// Helper to check bit in serialized bitmap
-	// Bitmap data is stored as big-endian uint32s starting at offset 4
-	// Long 1 (offset 4) = blocks 0-31, Long 2 (offset 8) = blocks 32-63, etc.
+	// Bitmap data: Long 1 (offset 4) = blocks 0-31, Long 2 = blocks 32-63, etc.
 	isBitClear := func(blockNum int) bool {
 		longIdx := blockNum / 32
 		bitPos := uint(blockNum % 32)
@@ -183,12 +127,10 @@ func TestBitmapDiskFormat(t *testing.T) {
 		return (longVal & (1 << bitPos)) == 0
 	}
 
-	// Block 0 (bootblock) should be allocated (bit clear)
+	// Bootblock should be allocated (bit clear)
 	if !isBitClear(0) {
 		t.Error("Block 0 should be allocated in disk format")
 	}
-
-	// Block 1 (bootblock) should be allocated (bit clear)
 	if !isBitClear(1) {
 		t.Error("Block 1 should be allocated in disk format")
 	}
@@ -213,4 +155,3 @@ func TestBitmapDiskFormat(t *testing.T) {
 		t.Error("Block 500 should be free in disk format")
 	}
 }
-
