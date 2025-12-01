@@ -123,7 +123,7 @@ func TestExtensionBlockMaxDataBlocks(t *testing.T) {
 		t.Errorf("High seq = %d, want %d", highSeq, MaxDataBlocks)
 	}
 
-	for i := 0; i < MaxDataBlocks; i++ {
+	for i := range MaxDataBlocks {
 		db := adf.GetLong(block, adf.OffsetFirstDataPtr-i)
 		expected := uint32(200 + i)
 		if db != expected {

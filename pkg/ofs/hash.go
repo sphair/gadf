@@ -28,7 +28,6 @@ func IntlHashName(name string) int {
 	h := len(name)
 
 	for _, c := range name {
-		// International toupper
 		uc := intlToUpper(c)
 		h = h * 13
 		h = h + int(uc)
@@ -49,4 +48,3 @@ func intlToUpper(c rune) rune {
 	}
 	return c
 }
-

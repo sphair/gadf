@@ -7,7 +7,7 @@ import (
 func TestCalculateChecksum(t *testing.T) {
 	block := make([]byte, BlockSize)
 
-	for i := 0; i < BlockSize/4; i++ {
+	for i := range BlockSize / 4 {
 		PutLong(block, i, uint32(i))
 	}
 
@@ -15,7 +15,7 @@ func TestCalculateChecksum(t *testing.T) {
 	PutLong(block, OffsetChecksum, checksum)
 
 	var sum uint32 = 0
-	for i := 0; i < BlockSize/4; i++ {
+	for i := range BlockSize / 4 {
 		sum += GetLong(block, i)
 	}
 	if sum != 0 {
@@ -26,7 +26,7 @@ func TestCalculateChecksum(t *testing.T) {
 func TestSetBlockChecksum(t *testing.T) {
 	block := make([]byte, BlockSize)
 
-	for i := 0; i < BlockSize/4; i++ {
+	for i := range BlockSize / 4 {
 		PutLong(block, i, uint32(i*0x11111111))
 	}
 

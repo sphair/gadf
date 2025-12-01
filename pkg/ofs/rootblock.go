@@ -85,7 +85,7 @@ func (rb *RootBlock) CreateBlock() []byte {
 	adf.PutLong(block, adf.OffsetFirstDataLong, 0)
 
 	// Hash table (72 entries)
-	for i := 0; i < HashTableSize; i++ {
+	for i := range HashTableSize {
 		adf.PutLong(block, adf.OffsetHashTable+i, rb.HashTable[i])
 	}
 

@@ -66,10 +66,7 @@ func GetBStr(block []byte, index int, maxLen int) string {
 	}
 	offset := index * longSize
 
-	length := int(block[offset])
-	if length > maxLen {
-		length = maxLen
-	}
+	length := min(int(block[offset]), maxLen)
 
 	return string(block[offset+1 : offset+1+length])
 }
