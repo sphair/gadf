@@ -7,18 +7,13 @@ import (
 func TestCalculateChecksum(t *testing.T) {
 	block := make([]byte, BlockSize)
 
-	// Fill with known values
 	for i := 0; i < BlockSize/4; i++ {
 		PutLong(block, i, uint32(i))
 	}
 
-	// Calculate checksum (standard offset for most blocks)
 	checksum := CalculateChecksum(block, OffsetChecksum)
-
-	// Set it and verify
 	PutLong(block, OffsetChecksum, checksum)
 
-	// Sum of all longs should now be 0
 	var sum uint32 = 0
 	for i := 0; i < BlockSize/4; i++ {
 		sum += GetLong(block, i)
@@ -31,15 +26,12 @@ func TestCalculateChecksum(t *testing.T) {
 func TestSetBlockChecksum(t *testing.T) {
 	block := make([]byte, BlockSize)
 
-	// Fill with data
 	for i := 0; i < BlockSize/4; i++ {
 		PutLong(block, i, uint32(i*0x11111111))
 	}
 
-	// Set checksum
 	SetBlockChecksum(block, OffsetChecksum)
 
-	// Verify by recalculating
 	expected := CalculateChecksum(block, OffsetChecksum)
 	got := GetLong(block, OffsetChecksum)
 	if got != expected {
@@ -48,19 +40,13 @@ func TestSetBlockChecksum(t *testing.T) {
 }
 
 func TestCalculateBootChecksum(t *testing.T) {
-	// Create a minimal bootblock
 	bootblock := make([]byte, BlockSize*2)
 
-	// Set DOS type
 	PutLong(bootblock, BootOffsetDOSType, DOSTypeOFS)
-
-	// Set root block
 	PutLong(bootblock, BootOffsetRootPtr, RootBlock)
 
-	// Calculate and set checksum
 	SetBootChecksum(bootblock)
 
-	// Verify by recalculating
 	checksum := CalculateBootChecksum(bootblock)
 	got := GetLong(bootblock, BootOffsetChecksum)
 	if got != checksum {
@@ -69,15 +55,11 @@ func TestCalculateBootChecksum(t *testing.T) {
 }
 
 func TestBootChecksumKnownValue(t *testing.T) {
-	// Test with the actual bootblock we use
-	// This ensures our checksum algorithm matches the Amiga's
 	bootblock := make([]byte, BlockSize*2)
 
-	// DOS0 type
 	PutLong(bootblock, BootOffsetDOSType, 0x444F5300)
 	PutLong(bootblock, BootOffsetRootPtr, RootBlock)
 
-	// Minimal boot code (just dos.library lookup)
 	bootCode := []byte{
 		0x43, 0xFA, 0x00, 0x12, // lea dos(pc),a1
 		0x4E, 0xAE, 0xFF, 0xA0, // jsr FindResident
@@ -95,13 +77,11 @@ func TestBootChecksumKnownValue(t *testing.T) {
 
 	SetBootChecksum(bootblock)
 
-	// The checksum should be non-zero and consistent
 	checksum := GetLong(bootblock, BootOffsetChecksum)
 	if checksum == 0 {
 		t.Error("Boot checksum should not be zero for valid bootblock")
 	}
 
-	// Verify it's stable
 	SetBootChecksum(bootblock)
 	checksum2 := GetLong(bootblock, BootOffsetChecksum)
 	if checksum != checksum2 {

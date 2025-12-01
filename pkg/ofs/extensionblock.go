@@ -38,27 +38,20 @@ func (eb *ExtensionBlock) AddDataBlock(blockNum uint32) bool {
 func (eb *ExtensionBlock) CreateBlock() []byte {
 	block := make([]byte, adf.BlockSize)
 
-	// Type at offset 0: T_LIST (16)
+	// Header
 	adf.PutLong(block, adf.OffsetBlockType, adf.TypeList)
-
-	// Header key (file header pointer) at offset 4
 	adf.PutLong(block, adf.OffsetHeaderKey, eb.HeaderKey)
-
-	// High seq (number of data blocks in this extension) at offset 8
 	adf.PutLong(block, adf.OffsetHighSeq, uint32(len(eb.DataBlocks)))
 
-	// Data blocks table: stored in reverse order starting at OffsetFirstDataPtr
+	// Data block pointers (stored in reverse order)
 	for i, db := range eb.DataBlocks {
 		adf.PutLong(block, adf.OffsetFirstDataPtr-i, db)
 	}
 
-	// Extension pointer (next extension block, or 0)
+	// Footer
 	adf.PutLong(block, adf.OffsetExtension, eb.Extension)
-
-	// Secondary type: ST_FILE (-3)
 	adf.PutLong(block, adf.OffsetSecondaryType, adf.STFile)
 
-	// Calculate and set checksum
 	adf.SetBlockChecksum(block, adf.OffsetChecksum)
 
 	return block

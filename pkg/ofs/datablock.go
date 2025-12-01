@@ -39,28 +39,17 @@ func NewDataBlock(blockNum, headerKey, seqNum uint32, data []byte) *DataBlock {
 func (db *DataBlock) CreateBlock() []byte {
 	block := make([]byte, adf.BlockSize)
 
-	// Type at offset 0: T_DATA (8)
+	// Header (24 bytes)
 	adf.PutLong(block, adf.OffsetBlockType, adf.TypeData)
-
-	// Header key at offset 4
 	adf.PutLong(block, adf.OffsetHeaderKey, db.HeaderKey)
-
-	// Sequence number at offset 8
 	adf.PutLong(block, adf.OffsetHighSeq, db.SeqNum)
-
-	// Data size at offset 12
 	adf.PutLong(block, adf.OffsetHashTableSize, db.DataSize)
-
-	// Next data at offset 16
 	adf.PutLong(block, adf.OffsetFirstDataLong, db.NextData)
+	// Checksum calculated after data
 
-	// Checksum at offset 20: calculated later
-	// adf.PutLong(block, 5, 0)
-
-	// Data at offset 24
+	// Data (488 bytes max)
 	copy(block[24:], db.Data)
 
-	// Calculate and set checksum
 	adf.SetBlockChecksum(block, adf.OffsetChecksum)
 
 	return block

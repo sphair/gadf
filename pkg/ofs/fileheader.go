@@ -92,63 +92,36 @@ func (fh *FileHeader) AssignDataBlocks(dataBlockNums []uint32, extBlockNums []ui
 func (fh *FileHeader) CreateBlock() []byte {
 	block := make([]byte, adf.BlockSize)
 
-	// Type at offset 0: T_HEADER (2)
+	// Header
 	adf.PutLong(block, adf.OffsetBlockType, adf.TypeHeader)
-
-	// Header key (self pointer) at offset 4
 	adf.PutLong(block, adf.OffsetHeaderKey, fh.BlockNum)
-
-	// High seq (number of data blocks in this header) at offset 8
 	adf.PutLong(block, adf.OffsetHighSeq, uint32(len(fh.DataBlocks)))
-
-	// Data size at offset 12: unused (0)
 	adf.PutLong(block, adf.OffsetHashTableSize, 0)
-
-	// First data at offset 16
 	if len(fh.DataBlocks) > 0 {
 		adf.PutLong(block, adf.OffsetFirstDataLong, fh.DataBlocks[0])
 	}
 
-	// Checksum at offset 20: calculated later
-	// adf.PutLong(block, 5, 0)
-
-	// Data blocks table at offset 24
-	// Data blocks are stored in reverse order: first block at OffsetFirstDataPtr
+	// Data block pointers (stored in reverse order)
 	for i, db := range fh.DataBlocks {
 		adf.PutLong(block, adf.OffsetFirstDataPtr-i, db)
 	}
 
-	// Protection
+	// File metadata
 	adf.PutLong(block, adf.OffsetProtection, fh.Protection)
-
-	// Byte size
 	adf.PutLong(block, adf.OffsetFileSize, fh.FileSize)
 
-	// Comment at offset -46 (BCPL string, max 79 chars) - empty
-	// adf.PutBStr(block, -46, 79, "")
-
-	// Modify date
 	days, mins, ticks := timeToAmiga(fh.ModifyTime)
 	adf.PutLong(block, adf.OffsetDateDays, days)
 	adf.PutLong(block, adf.OffsetDateMins, mins)
 	adf.PutLong(block, adf.OffsetDateTicks, ticks)
 
-	// Name
+	// Footer
 	adf.PutBStr(block, adf.OffsetName, adf.MaxFilenameLen, fh.Name)
-
-	// Hash chain pointer
 	adf.PutLong(block, adf.OffsetNextHash, fh.HashChain)
-
-	// Parent pointer
 	adf.PutLong(block, adf.OffsetParent, fh.Parent)
-
-	// Extension pointer
 	adf.PutLong(block, adf.OffsetExtension, fh.Extension)
-
-	// Secondary type: ST_FILE (-3)
 	adf.PutLong(block, adf.OffsetSecondaryType, adf.STFile)
 
-	// Calculate and set checksum
 	adf.SetBlockChecksum(block, adf.OffsetChecksum)
 
 	return block

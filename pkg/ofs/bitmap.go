@@ -12,12 +12,11 @@ type Bitmap struct {
 
 // NewBitmap creates a new bitmap for a floppy disk
 func NewBitmap() *Bitmap {
-	// DD floppy: 1760 blocks, 1760 bits = 55 uint32s (55 * 32 = 1760)
-	// Block 0 = bit 0, block 1759 = bit 1759
+	// DD floppy: 1760 blocks = 55 uint32s (55 * 32 = 1760 bits)
 	bm := &Bitmap{
 		blocks: make([]uint32, 55),
 	}
-	// Initialize all blocks as free (all bits set)
+	// All bits set = all blocks free
 	for i := range bm.blocks {
 		bm.blocks[i] = adf.BitmapValid
 	}
@@ -47,7 +46,7 @@ func (bm *Bitmap) Allocate(blockNum int) {
 		return
 	}
 	idx, bit := blockToBitmapPos(blockNum)
-	bm.blocks[idx] &^= (1 << bit) // Clear bit
+	bm.blocks[idx] &^= (1 << bit)
 }
 
 // Free marks a block as free
@@ -56,7 +55,7 @@ func (bm *Bitmap) Free(blockNum int) {
 		return
 	}
 	idx, bit := blockToBitmapPos(blockNum)
-	bm.blocks[idx] |= (1 << bit) // Set bit
+	bm.blocks[idx] |= (1 << bit)
 }
 
 // AllocateNext finds and allocates the next free block
@@ -106,13 +105,10 @@ func (bm *Bitmap) CountFree() int {
 func (bm *Bitmap) CreateBitmapBlock() []byte {
 	block := make([]byte, adf.BlockSize)
 
-	// Copy bitmap data
 	for i, val := range bm.blocks {
 		adf.PutLong(block, adf.BitmapDataStartLong+i, val)
 	}
 
-	// Calculate and set checksum using bitmap checksum algorithm
-	// (same as normal checksum but at position 0)
 	adf.SetBlockChecksum(block, adf.BitmapChecksumLong)
 
 	return block

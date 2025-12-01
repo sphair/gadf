@@ -4,7 +4,6 @@ import (
 	"testing"
 )
 
-// TestSplitFileData verifies chunk splitting at OFS data block boundaries
 func TestSplitFileData(t *testing.T) {
 	tests := []struct {
 		name           string
@@ -41,14 +40,12 @@ func TestSplitFileData(t *testing.T) {
 				}
 			}
 
-			// Verify no chunk exceeds max size
 			for i, chunk := range chunks {
 				if len(chunk) > OFSDataSize {
 					t.Errorf("Chunk %d size = %d, exceeds max %d", i, len(chunk), OFSDataSize)
 				}
 			}
 
-			// Verify total data is preserved
 			totalSize := 0
 			for _, chunk := range chunks {
 				totalSize += len(chunk)
@@ -60,7 +57,6 @@ func TestSplitFileData(t *testing.T) {
 	}
 }
 
-// TestDataBlockCreate verifies OFS data block layout
 func TestDataBlockCreate(t *testing.T) {
 	data := []byte("Hello, Amiga!")
 	db := NewDataBlock(100, 50, 1, data)
@@ -72,13 +68,10 @@ func TestDataBlockCreate(t *testing.T) {
 		t.Errorf("Block size = %d, want 512", len(block))
 	}
 
-	// Verify header fields (big-endian)
-	// Type at offset 0: T_DATA (8)
 	if block[0] != 0 || block[1] != 0 || block[2] != 0 || block[3] != 8 {
 		t.Error("Block type should be T_DATA (8)")
 	}
 
-	// Data at offset 24
 	for i, b := range data {
 		if block[24+i] != b {
 			t.Errorf("Data mismatch at offset %d: got %d, want %d", 24+i, block[24+i], b)

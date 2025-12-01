@@ -84,18 +84,15 @@ func joinAmigaPath(parent, child string) string {
 }
 
 func (b *Builder) Build() error {
-	// Reserve the rootblock and bitmap block
+	// Reserve system blocks
 	b.bitmap.AllocateSpecific(adf.RootBlock)
 	b.bitmap.AllocateSpecific(adf.BitmapBlock)
 
-	// Create and write bootblock
 	if err := WriteBootBlock(b.disk, b.minimalBoot); err != nil {
 		return fmt.Errorf("failed to write bootblock: %w", err)
 	}
 
-	// Create root block
 	b.rootBlock = NewRootBlock(b.label, adf.BitmapBlock)
-
 	return nil
 }
 
@@ -109,12 +106,10 @@ func (b *Builder) allocateBlocks(n int) []uint32 {
 }
 
 func (b *Builder) Finalize() error {
-	// Write root block
 	if err := b.rootBlock.WriteBlock(b.disk); err != nil {
 		return fmt.Errorf("failed to write rootblock: %w", err)
 	}
 
-	// Write bitmap
 	if err := b.bitmap.WriteBitmapBlock(b.disk, adf.BitmapBlock); err != nil {
 		return fmt.Errorf("failed to write bitmap: %w", err)
 	}
@@ -137,9 +132,8 @@ func (b *Builder) AddFile(dirPath, name string, data []byte) error {
 
 	dirPath = normalizePath(dirPath)
 
-	// Get or create the parent directory
 	var parentBlock uint32
-	var parentDir *DirBlock // nil for root
+	var parentDir *DirBlock
 
 	if dirPath == "" {
 		parentBlock = adf.RootBlock
@@ -152,20 +146,17 @@ func (b *Builder) AddFile(dirPath, name string, data []byte) error {
 		parentDir = dir
 	}
 
-	// Split file data into chunks (empty files do not allocate data blocks)
 	var chunks [][]byte
 	if len(data) > 0 {
 		chunks = SplitFileData(data)
 	}
 	numExtBlocks := RequiredExtensionBlocks(len(chunks))
 
-	// Check if we have enough space: 1 file header + extension blocks + data blocks
 	totalBlocksNeeded := 1 + numExtBlocks + len(chunks)
 	if b.bitmap.CountFree() < totalBlocksNeeded {
 		return fmt.Errorf("disk full: need %d blocks for %s, only %d free", totalBlocksNeeded, name, b.bitmap.CountFree())
 	}
 
-	// Allocate all blocks
 	headerBlockNum := b.bitmap.AllocateNext()
 	if headerBlockNum < 0 {
 		return fmt.Errorf("disk full: cannot allocate file header for %s", name)
@@ -174,19 +165,16 @@ func (b *Builder) AddFile(dirPath, name string, data []byte) error {
 	extBlockNums := b.allocateBlocks(numExtBlocks)
 	dataBlockNums := b.allocateBlocks(len(chunks))
 
-	// Create file header and assign data blocks (extension blocks stored internally)
+	// Create file header
 	fh := NewFileHeader(uint32(headerBlockNum), parentBlock, name, uint32(len(data)))
 	fh.AssignDataBlocks(dataBlockNums, extBlockNums)
-
-	// Add to parent's hash table
 	fh.HashChain = b.addHashEntry(parentDir, name, uint32(headerBlockNum))
 
-	// Write file header and extension blocks
 	if err := fh.WriteBlock(b.disk); err != nil {
 		return fmt.Errorf("failed to write file header for %s: %w", name, err)
 	}
 
-	// Create and write data blocks
+	// Write data blocks
 	for i, chunk := range chunks {
 		db := NewDataBlock(dataBlockNums[i], uint32(headerBlockNum), uint32(i+1), chunk)
 		if i < len(chunks)-1 {
@@ -197,15 +185,13 @@ func (b *Builder) AddFile(dirPath, name string, data []byte) error {
 		}
 	}
 
-	// Rewrite parent directory block if it's not the root
-	// (root block is written in Finalize)
+	// Parent directory must be rewritten (root block is written in Finalize)
 	if parentDir != nil {
 		if err := parentDir.WriteBlock(b.disk); err != nil {
 			return fmt.Errorf("failed to update directory %s: %w", dirPath, err)
 		}
 	}
 
-	// Track the file
 	if dirPath == "" {
 		b.files = append(b.files, name)
 	} else {
@@ -276,14 +262,11 @@ func (b *Builder) getOrCreateDir(path string) (*DirBlock, error) {
 
 // CreateStartupSequence creates the S/startup-sequence file
 func (b *Builder) CreateStartupSequence(executableName string) error {
-	// Ensure S directory exists
 	if _, err := b.getOrCreateDir("S"); err != nil {
 		return err
 	}
 
-	// Create startup-sequence content
 	content := executableName + "\n"
-
 	return b.AddFile("S", "startup-sequence", []byte(content))
 }
 
@@ -297,23 +280,19 @@ func (b *Builder) AddDirectory(sourcePath, destPath string, flatten bool) ([]str
 	destPath = normalizePath(destPath)
 
 	if flatten {
-		// Walk all files recursively and add them to the destination path
 		err := filepath.Walk(sourcePath, func(path string, info os.FileInfo, err error) error {
 			if err != nil {
 				return err
 			}
 
-			// Skip directories, only process files
 			if info.IsDir() {
 				return nil
 			}
 
-			// Add file to the destination path (flattened)
 			if err := b.AddFileFromDisk(destPath, path); err != nil {
 				return err
 			}
 
-			// Track what was added
 			baseName := filepath.Base(path)
 			if destPath == "" {
 				added = append(added, baseName)
@@ -328,7 +307,6 @@ func (b *Builder) AddDirectory(sourcePath, destPath string, flatten bool) ([]str
 			return added, fmt.Errorf("failed to walk directory %s: %w", sourcePath, err)
 		}
 	} else {
-		// Recursively add files preserving directory structure
 		subAdded, err := b.addDirectoryRecursive(sourcePath, destPath)
 		if err != nil {
 			return nil, err
@@ -352,14 +330,12 @@ func (b *Builder) addDirectoryRecursive(sourcePath, destPath string) ([]string, 
 		srcFilePath := filepath.Join(sourcePath, entry.Name())
 
 		if entry.IsDir() {
-			// Create the subdirectory on disk
 			subDestPath := joinAmigaPath(destPath, entry.Name())
 			if _, err := b.getOrCreateDir(subDestPath); err != nil {
 				return added, fmt.Errorf("failed to create directory %s: %w", subDestPath, err)
 			}
 			added = append(added, subDestPath+"/")
 
-			// Recurse into it
 			subAdded, err := b.addDirectoryRecursive(srcFilePath, subDestPath)
 			if err != nil {
 				return added, err
@@ -368,7 +344,6 @@ func (b *Builder) addDirectoryRecursive(sourcePath, destPath string) ([]string, 
 			continue
 		}
 
-		// Add file to destination directory
 		if err := b.AddFileFromDisk(destPath, srcFilePath); err != nil {
 			return added, err
 		}

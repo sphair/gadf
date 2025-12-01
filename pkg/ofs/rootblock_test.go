@@ -69,7 +69,6 @@ func TestTimeToAmiga(t *testing.T) {
 	}
 }
 
-// TestRootBlockCreateBlock verifies the root block layout matches Amiga OFS spec
 func TestRootBlockCreateBlock(t *testing.T) {
 	rb := NewRootBlock("MyVolume", 881)
 	rb.HashTable[0] = 100
@@ -77,56 +76,41 @@ func TestRootBlockCreateBlock(t *testing.T) {
 
 	block := rb.CreateBlock()
 
-	// Verify block size
 	if len(block) != adf.BlockSize {
 		t.Fatalf("Block size = %d, want %d", len(block), adf.BlockSize)
 	}
 
-	// Verify type at offset 0: T_HEADER (2)
 	if got := adf.GetLong(block, adf.OffsetBlockType); got != adf.TypeHeader {
 		t.Errorf("Type = %d, want %d (T_HEADER)", got, adf.TypeHeader)
 	}
-
-	// Verify header key at offset 1: 0 (unused for rootblock)
 	if got := adf.GetLong(block, adf.OffsetHeaderKey); got != 0 {
 		t.Errorf("Header key = %d, want 0", got)
 	}
-
-	// Verify hash table size at offset 3: 72
 	if got := adf.GetLong(block, adf.OffsetHashTableSize); got != HashTableSize {
 		t.Errorf("Hash table size = %d, want %d", got, HashTableSize)
 	}
-
-	// Verify hash table entries (offset 6-77)
 	if got := adf.GetLong(block, adf.OffsetHashTable); got != 100 {
 		t.Errorf("HashTable[0] = %d, want 100", got)
 	}
 	if got := adf.GetLong(block, adf.OffsetHashTable+71); got != 200 {
 		t.Errorf("HashTable[71] = %d, want 200", got)
 	}
-
-	// Verify bitmap flag at defined offset
 	if got := adf.GetLong(block, adf.OffsetBitmapFlag); got != adf.BitmapValid {
 		t.Errorf("Bitmap flag = 0x%X, want 0x%X", got, adf.BitmapValid)
 	}
-
-	// Verify bitmap block pointer
 	if got := adf.GetLong(block, adf.OffsetBitmapPages); got != 881 {
 		t.Errorf("Bitmap block = %d, want 881", got)
 	}
 
-	// Verify volume name
 	name := adf.GetBStr(block, adf.OffsetName, adf.MaxFilenameLen)
 	if name != "MyVolume" {
 		t.Errorf("Name = %s, want MyVolume", name)
 	}
 
-	// Verify secondary type at offset -1: ST_ROOT (1)
 	if got := adf.GetLong(block, adf.OffsetSecondaryType); got != adf.STRoot {
 		t.Errorf("Secondary type = %d, want %d (ST_ROOT)", got, adf.STRoot)
 	}
 
-	// Verify checksum is valid
 	checksum := adf.GetLong(block, adf.OffsetChecksum)
 	calculated := adf.CalculateChecksum(block, adf.OffsetChecksum)
 	if checksum != calculated {
@@ -134,7 +118,6 @@ func TestRootBlockCreateBlock(t *testing.T) {
 	}
 }
 
-// TestRootBlockDateFields verifies all 3 date fields are at correct offsets
 func TestRootBlockDateFields(t *testing.T) {
 	fixedTime := time.Date(2000, 6, 15, 14, 30, 45, 0, time.UTC)
 	rb := NewRootBlock("Test", 881)
@@ -146,7 +129,6 @@ func TestRootBlockDateFields(t *testing.T) {
 
 	days, mins, ticks := timeToAmiga(fixedTime)
 
-	// Check modification date
 	if got := adf.GetLong(block, adf.OffsetDateDays); got != days {
 		t.Errorf("ModifyTime days = %d, want %d", got, days)
 	}
@@ -157,7 +139,6 @@ func TestRootBlockDateFields(t *testing.T) {
 		t.Errorf("ModifyTime ticks = %d, want %d", got, ticks)
 	}
 
-	// Check disk date
 	if got := adf.GetLong(block, adf.OffsetDiskDateDays); got != days {
 		t.Errorf("DiskTime days = %d, want %d", got, days)
 	}
@@ -168,7 +149,6 @@ func TestRootBlockDateFields(t *testing.T) {
 		t.Errorf("DiskTime ticks = %d, want %d", got, ticks)
 	}
 
-	// Check creation date
 	if got := adf.GetLong(block, adf.OffsetCreateDateDays); got != days {
 		t.Errorf("CreateTime days = %d, want %d", got, days)
 	}
@@ -180,23 +160,19 @@ func TestRootBlockDateFields(t *testing.T) {
 	}
 }
 
-// TestRootBlockAddHashEntry verifies hash chaining returns previous entry
 func TestRootBlockAddHashEntry(t *testing.T) {
 	rb := NewRootBlock("Test", 881)
 
-	// Add first entry - should return 0 (no previous)
 	prev := rb.AddHashEntry("testfile", 100)
 	if prev != 0 {
 		t.Errorf("First AddHashEntry returned %d, want 0", prev)
 	}
 
-	// Add second entry with same hash - should return previous block
 	prev = rb.AddHashEntry("testfile", 200)
 	if prev != 100 {
 		t.Errorf("Second AddHashEntry returned %d, want 100 (previous entry)", prev)
 	}
 
-	// Verify the hash table was updated to point to new entry
 	hash := HashName("testfile")
 	if rb.HashTable[hash] != 200 {
 		t.Errorf("HashTable[%d] = %d, want 200", hash, rb.HashTable[hash])

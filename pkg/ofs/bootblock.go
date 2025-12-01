@@ -56,20 +56,15 @@ var MinimalBootCode = []byte{
 func CreateBootBlock(minimal bool) []byte {
 	bootblock := make([]byte, adf.BootBlockSize)
 
-	// DOS type at offset 0
 	adf.PutLong(bootblock, adf.BootOffsetDOSType, adf.DOSTypeOFS)
-
-	// Root block pointer at offset 8
 	adf.PutLong(bootblock, adf.BootOffsetRootPtr, adf.RootBlock)
 
-	// Copy boot code
 	if minimal {
 		copy(bootblock[adf.BootCodeOffset:], MinimalBootCode)
 	} else {
 		copy(bootblock[adf.BootCodeOffset:], StandardBootCode)
 	}
 
-	// Calculate and set checksum
 	adf.SetBootChecksum(bootblock)
 
 	return bootblock

@@ -56,49 +56,32 @@ func (db *DirBlock) AddHashEntry(name string, blockNum uint32) uint32 {
 func (db *DirBlock) CreateBlock() []byte {
 	block := make([]byte, adf.BlockSize)
 
-	// Type at offset 0: T_HEADER (2)
+	// Header
 	adf.PutLong(block, adf.OffsetBlockType, adf.TypeHeader)
-
-	// Header key (self pointer) at offset 4
 	adf.PutLong(block, adf.OffsetHeaderKey, db.BlockNum)
-
-	// Unused at offsets 8, 12, 16
 	adf.PutLong(block, adf.OffsetHighSeq, 0)
 	adf.PutLong(block, adf.OffsetHashTableSize, 0)
 	adf.PutLong(block, adf.OffsetFirstDataLong, 0)
 
-	// Checksum at offset 20: calculated later
-
-	// Hash table at offset 24 (72 entries)
+	// Hash table (72 entries)
 	for i := 0; i < HashTableSize; i++ {
 		adf.PutLong(block, adf.OffsetHashTable+i, db.HashTable[i])
 	}
 
-	// Protection bits
 	adf.PutLong(block, adf.OffsetProtection, db.Protection)
 
-	// Modify date
 	days, mins, ticks := timeToAmiga(db.ModifyTime)
 	adf.PutLong(block, adf.OffsetDateDays, days)
 	adf.PutLong(block, adf.OffsetDateMins, mins)
 	adf.PutLong(block, adf.OffsetDateTicks, ticks)
 
-	// Name
+	// Footer
 	adf.PutBStr(block, adf.OffsetName, adf.MaxFilenameLen, db.Name)
-
-	// Hash chain pointer
 	adf.PutLong(block, adf.OffsetNextHash, db.HashChain)
-
-	// Parent pointer
 	adf.PutLong(block, adf.OffsetParent, db.Parent)
-
-	// Extension (unused for OFS)
 	adf.PutLong(block, adf.OffsetExtension, 0)
-
-	// Secondary type: ST_USERDIR
 	adf.PutLong(block, adf.OffsetSecondaryType, adf.STUserDir)
 
-	// Calculate and set checksum at offset 5
 	adf.SetBlockChecksum(block, adf.OffsetChecksum)
 
 	return block

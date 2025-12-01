@@ -4,7 +4,6 @@ import (
 	"testing"
 )
 
-// TestRequiredExtensionBlocks verifies calculation for large files
 func TestRequiredExtensionBlocks(t *testing.T) {
 	tests := []struct {
 		numDataBlocks int
@@ -13,12 +12,12 @@ func TestRequiredExtensionBlocks(t *testing.T) {
 		{0, 0},
 		{1, 0},
 		{71, 0},
-		{72, 0},   // exactly fits in file header
-		{73, 1},   // needs 1 extension block
-		{144, 1},  // 72 + 72 = exactly fits header + 1 extension
-		{145, 2},  // needs 2 extension blocks
-		{216, 2},  // 72 + 72 + 72 = exactly fits
-		{217, 3},  // needs 3 extension blocks
+		{72, 0},    // exactly fits in file header
+		{73, 1},    // needs 1 extension block
+		{144, 1},   // 72 + 72 = exactly fits header + 1 extension
+		{145, 2},   // needs 2 extension blocks
+		{216, 2},   // 72 + 72 + 72 = exactly fits
+		{217, 3},   // needs 3 extension blocks
 		{1000, 13}, // (1000-72+71)/72 = 13
 	}
 
@@ -30,7 +29,6 @@ func TestRequiredExtensionBlocks(t *testing.T) {
 	}
 }
 
-// TestAssignDataBlocksSmallFile verifies data blocks go directly in file header
 func TestAssignDataBlocksSmallFile(t *testing.T) {
 	fh := NewFileHeader(100, 880, "test", 1000)
 
@@ -63,7 +61,6 @@ func TestAssignDataBlocksOneExtension(t *testing.T) {
 	extBlockNums := []uint32{150}
 	fh.AssignDataBlocks(dataBlocks, extBlockNums)
 
-	// Verify file header
 	if len(fh.DataBlocks) != MaxDataBlocks {
 		t.Errorf("FileHeader.DataBlocks length = %d, want %d", len(fh.DataBlocks), MaxDataBlocks)
 	}
@@ -71,7 +68,6 @@ func TestAssignDataBlocksOneExtension(t *testing.T) {
 		t.Errorf("FileHeader.Extension = %d, want 150", fh.Extension)
 	}
 
-	// Verify extension block
 	if len(fh.extensions) != 1 {
 		t.Fatalf("Expected 1 extension block, got %d", len(fh.extensions))
 	}
@@ -91,7 +87,7 @@ func TestAssignDataBlocksOneExtension(t *testing.T) {
 	}
 }
 
-// TestAssignDataBlocksMultipleExtensions verifies chaining of multiple extension blocks
+// TestAssignDataBlocksMultipleExtensions verifies chaining of extension blocks
 func TestAssignDataBlocksMultipleExtensions(t *testing.T) {
 	fh := NewFileHeader(100, 880, "test", 100000)
 
@@ -104,7 +100,6 @@ func TestAssignDataBlocksMultipleExtensions(t *testing.T) {
 	extBlockNums := []uint32{150, 151}
 	fh.AssignDataBlocks(dataBlocks, extBlockNums)
 
-	// Verify chain
 	if fh.Extension != 150 {
 		t.Errorf("FileHeader.Extension = %d, want 150", fh.Extension)
 	}
@@ -120,7 +115,6 @@ func TestAssignDataBlocksMultipleExtensions(t *testing.T) {
 		t.Errorf("extensions[1].Extension = %d, want 0", fh.extensions[1].Extension)
 	}
 
-	// Verify data block counts
 	if len(fh.DataBlocks) != MaxDataBlocks {
 		t.Errorf("FileHeader has %d data blocks, want %d", len(fh.DataBlocks), MaxDataBlocks)
 	}
@@ -131,7 +125,6 @@ func TestAssignDataBlocksMultipleExtensions(t *testing.T) {
 		t.Errorf("extensions[1] has %d data blocks, want 56", len(fh.extensions[1].DataBlocks))
 	}
 
-	// Verify all extension blocks point to same header
 	for i, eb := range fh.extensions {
 		if eb.HeaderKey != 100 {
 			t.Errorf("extensions[%d].HeaderKey = %d, want 100", i, eb.HeaderKey)
@@ -139,11 +132,9 @@ func TestAssignDataBlocksMultipleExtensions(t *testing.T) {
 	}
 }
 
-// TestFileHeaderAddDataBlock verifies capacity limit of 72
 func TestFileHeaderAddDataBlock(t *testing.T) {
 	fh := NewFileHeader(100, 880, "test", 1000)
 
-	// Add blocks up to max
 	for i := 0; i < MaxDataBlocks; i++ {
 		ok := fh.AddDataBlock(uint32(200 + i))
 		if !ok {
@@ -151,7 +142,6 @@ func TestFileHeaderAddDataBlock(t *testing.T) {
 		}
 	}
 
-	// Next add should fail
 	ok := fh.AddDataBlock(999)
 	if ok {
 		t.Error("AddDataBlock beyond max returned true, want false")

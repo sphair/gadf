@@ -6,7 +6,6 @@ import (
 	"testing"
 )
 
-// TestReadWriteBlock verifies block I/O correctness
 func TestReadWriteBlock(t *testing.T) {
 	disk := NewDisk()
 
@@ -31,12 +30,10 @@ func TestReadWriteBlock(t *testing.T) {
 	}
 }
 
-// TestBlockBoundaries verifies boundary checking
 func TestBlockBoundaries(t *testing.T) {
 	disk := NewDisk()
 	testData := make([]byte, BlockSize)
 
-	// Invalid block numbers
 	if err := disk.WriteBlock(-1, testData); err == nil {
 		t.Error("WriteBlock(-1) should fail")
 	}
@@ -50,7 +47,6 @@ func TestBlockBoundaries(t *testing.T) {
 		t.Error("ReadBlock(TotalBlocks) should fail")
 	}
 
-	// Valid boundaries
 	if err := disk.WriteBlock(0, testData); err != nil {
 		t.Errorf("WriteBlock(0) failed: %v", err)
 	}
@@ -59,7 +55,6 @@ func TestBlockBoundaries(t *testing.T) {
 	}
 }
 
-// TestWriteBlockSize verifies block size validation
 func TestWriteBlockSize(t *testing.T) {
 	disk := NewDisk()
 
@@ -74,7 +69,6 @@ func TestWriteBlockSize(t *testing.T) {
 	}
 }
 
-// TestSaveLoad verifies disk image persistence
 func TestSaveLoad(t *testing.T) {
 	disk := NewDisk()
 
@@ -98,13 +92,11 @@ func TestSaveLoad(t *testing.T) {
 		t.Errorf("Saved file size = %d, want %d", info.Size(), DiskSize)
 	}
 
-	// Load into new disk
 	disk2 := NewDisk()
 	if err := disk2.Load(tmpFile); err != nil {
 		t.Fatalf("Load failed: %v", err)
 	}
 
-	// Verify data
 	readData, _ := disk2.ReadBlock(RootBlock)
 	for i := range testData {
 		if readData[i] != testData[i] {
@@ -113,7 +105,6 @@ func TestSaveLoad(t *testing.T) {
 	}
 }
 
-// TestWriteBootBlock verifies bootblock write spans 2 blocks
 func TestWriteBootBlock(t *testing.T) {
 	disk := NewDisk()
 

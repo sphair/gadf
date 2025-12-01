@@ -51,15 +51,11 @@ func PutBStr(block []byte, index int, maxLen int, s string) {
 	}
 	offset := index * longSize
 
-	// Truncate if necessary
 	if len(s) > maxLen {
 		s = s[:maxLen]
 	}
 
-	// Write length byte
 	block[offset] = byte(len(s))
-
-	// Write string data
 	copy(block[offset+1:], []byte(s))
 }
 

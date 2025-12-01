@@ -4,13 +4,12 @@ import (
 	"testing"
 )
 
-// TestHashName verifies hash values match Amiga DOS spec
+// TestHashName verifies hash values match Amiga DOS (if these change, disk won't work)
 func TestHashName(t *testing.T) {
 	tests := []struct {
 		name     string
 		expected int
 	}{
-		// Known values from Amiga DOS - if these change, disk won't work
 		{"S", 24},
 		{"C", 8},
 		{"startup-sequence", 49},
@@ -25,7 +24,6 @@ func TestHashName(t *testing.T) {
 			if got != tt.expected {
 				t.Errorf("HashName(%q) = %d, want %d", tt.name, got, tt.expected)
 			}
-			// Also verify result is in valid range
 			if got < 0 || got >= HashTableSize {
 				t.Errorf("HashName(%q) = %d, out of range [0, %d)", tt.name, got, HashTableSize)
 			}

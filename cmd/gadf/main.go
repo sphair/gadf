@@ -19,7 +19,6 @@ import (
 const version = "1.0.0"
 
 func main() {
-	// Define command-line flags
 	inputFile := flag.String("i", "", "Input executable file (required)")
 	outputFile := flag.String("a", "", "Output ADF filename (default: <input>.adf)")
 	label := flag.String("l", "", "Volume label (default: input filename, max 30 chars)")
@@ -28,7 +27,6 @@ func main() {
 	showVersion := flag.Bool("version", false, "Show version information")
 	showHelp := flag.Bool("h", false, "Show help")
 
-	// Custom usage message
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "gadf v%s - Create bootable Amiga ADF disk images\n\n", version)
 		fmt.Fprintf(os.Stderr, "Usage: gadf -i <executable> [options] [files/directories...]\n\n")
@@ -59,7 +57,6 @@ func main() {
 
 	flag.Parse()
 
-	// Handle version flag
 	if *showVersion {
 		fmt.Printf("gadf v%s\n", version)
 		fmt.Println("Create bootable Amiga ADF disk images from executables")
@@ -67,13 +64,11 @@ func main() {
 		os.Exit(0)
 	}
 
-	// Handle help flag
 	if *showHelp {
 		flag.Usage()
 		os.Exit(0)
 	}
 
-	// Validate required input
 	if *inputFile == "" {
 		fmt.Fprintln(os.Stderr, "Error: input file (-i) is required")
 		fmt.Fprintln(os.Stderr, "")
@@ -81,16 +76,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Check input file exists
 	if _, err := os.Stat(*inputFile); os.IsNotExist(err) {
 		fmt.Fprintf(os.Stderr, "Error: input file does not exist: %s\n", *inputFile)
 		os.Exit(1)
 	}
 
-	// Determine output filename
 	output := *outputFile
 	if output == "" {
-		// Remove extension and add .adf
 		base := filepath.Base(*inputFile)
 		ext := filepath.Ext(base)
 		if ext != "" {
@@ -99,10 +91,8 @@ func main() {
 		output = base + ".adf"
 	}
 
-	// Determine volume label
 	volumeLabel := *label
 	if volumeLabel == "" {
-		// Use input filename without extension
 		base := filepath.Base(*inputFile)
 		ext := filepath.Ext(base)
 		if ext != "" {
@@ -111,19 +101,16 @@ func main() {
 		volumeLabel = base
 	}
 
-	// Truncate label if too long
 	if len(volumeLabel) > 30 {
 		volumeLabel = volumeLabel[:30]
 		fmt.Printf("Warning: volume label truncated to 30 characters: %s\n", volumeLabel)
 	}
 
-	// Validate label
 	if err := ofs.ValidateFilename(volumeLabel); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: invalid volume label: %v\n", err)
 		os.Exit(1)
 	}
 
-	// Get executable filename for disk (without path)
 	execName := filepath.Base(*inputFile)
 	if err := ofs.ValidateFilename(execName); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: invalid executable filename: %v\n", err)
@@ -139,26 +126,21 @@ func main() {
 		fmt.Println("  Bootblock: standard")
 	}
 
-	// Create the builder
 	builder := ofs.NewBuilder(volumeLabel)
-	builder.SetMinimalBoot(!*shellSuppress) // minimal=true is default (no shell suppress)
+	builder.SetMinimalBoot(!*shellSuppress)
 
-	// Initialize the disk structure
 	if err := builder.Build(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: failed to initialize disk: %v\n", err)
 		os.Exit(1)
 	}
 
-	// Add the executable
 	if err := builder.AddFileFromDisk("", *inputFile); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: failed to add executable: %v\n", err)
 		os.Exit(1)
 	}
 
-	// Add additional files/directories from remaining arguments
 	additionalItems := flag.Args()
 	for _, item := range additionalItems {
-		// Check if item exists
 		info, err := os.Stat(item)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: cannot access '%s': %v\n", item, err)
@@ -183,19 +165,16 @@ func main() {
 		}
 	}
 
-	// Create startup-sequence
 	if err := builder.CreateStartupSequence(execName); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: failed to create startup-sequence: %v\n", err)
 		os.Exit(1)
 	}
 
-	// Finalize the disk
 	if err := builder.Finalize(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: failed to finalize disk: %v\n", err)
 		os.Exit(1)
 	}
 
-	// Save the disk image
 	if err := builder.Save(output); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: failed to save ADF: %v\n", err)
 		os.Exit(1)
@@ -208,14 +187,11 @@ func main() {
 
 	fmt.Printf("\nSuccess! %d blocks used (%d%% of total %d, %d free)\n\n", usedBlocks, usedPercent, totalBlocks, freeBlocks)
 
-	// Display directory structure
 	fmt.Println("ADF structure:")
 
-	// Get directories and files
 	dirs := builder.GetDirectories()
 	files := builder.GetFileList()
 
-	// Build a tree structure
 	filesByDir := make(map[string][]string)
 	rootFiles := []string{}
 
@@ -228,16 +204,13 @@ func main() {
 		}
 	}
 
-	// Sort directories
 	slices.Sort(dirs)
 	slices.Sort(rootFiles)
 
-	// Print root files
 	for _, file := range rootFiles {
 		fmt.Printf("  %s\n", file)
 	}
 
-	// Print directories and their contents
 	for _, dir := range dirs {
 		fmt.Printf("  %s/\n", dir)
 		dirFiles := filesByDir[dir]

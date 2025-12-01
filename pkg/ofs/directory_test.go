@@ -7,8 +7,7 @@ import (
 	"github.com/sphair/gadf/pkg/adf"
 )
 
-// TestDirBlockCreateBlock verifies directory block layout matches Amiga OFS spec
-// Note: Directory blocks differ from root blocks (have self-pointer, parent, hash chain)
+// TestDirBlockCreateBlock verifies directory block layout (differs from root: has self-pointer, parent, hash chain)
 func TestDirBlockCreateBlock(t *testing.T) {
 	db := NewDirBlock(100, 880, "TestDir")
 	db.HashTable[0] = 150
@@ -18,61 +17,44 @@ func TestDirBlockCreateBlock(t *testing.T) {
 
 	block := db.CreateBlock()
 
-	// Verify block size
 	if len(block) != adf.BlockSize {
 		t.Fatalf("Block size = %d, want %d", len(block), adf.BlockSize)
 	}
 
-	// Verify type at offset 0: T_HEADER (2)
 	if got := adf.GetLong(block, adf.OffsetBlockType); got != adf.TypeHeader {
 		t.Errorf("Type = %d, want %d (T_HEADER)", got, adf.TypeHeader)
 	}
-
-	// Verify header key (self pointer) at offset 1 - differs from rootblock!
 	if got := adf.GetLong(block, adf.OffsetHeaderKey); got != 100 {
 		t.Errorf("Header key = %d, want 100", got)
 	}
-
-	// Verify hash table entries (offset 6-77)
 	if got := adf.GetLong(block, adf.OffsetHashTable); got != 150 {
 		t.Errorf("HashTable[0] = %d, want 150", got)
 	}
 	if got := adf.GetLong(block, adf.OffsetHashTable+71); got != 250 {
 		t.Errorf("HashTable[71] = %d, want 250", got)
 	}
-
-	// Verify protection at defined offset
 	if got := adf.GetLong(block, adf.OffsetProtection); got != 0x0F {
 		t.Errorf("Protection = 0x%X, want 0x0F", got)
 	}
 
-	// Verify directory name
 	name := adf.GetBStr(block, adf.OffsetName, adf.MaxFilenameLen)
 	if name != "TestDir" {
 		t.Errorf("Name = %s, want TestDir", name)
 	}
 
-	// Verify hash chain at offset -4
 	if got := adf.GetLong(block, adf.OffsetNextHash); got != 99 {
 		t.Errorf("Hash chain = %d, want 99", got)
 	}
-
-	// Verify parent at offset -3
 	if got := adf.GetLong(block, adf.OffsetParent); got != 880 {
 		t.Errorf("Parent = %d, want 880", got)
 	}
-
-	// Verify extension at offset -2: 0 for OFS
 	if got := adf.GetLong(block, adf.OffsetExtension); got != 0 {
 		t.Errorf("Extension = %d, want 0", got)
 	}
-
-	// Verify secondary type at offset -1: ST_USERDIR (2) - differs from rootblock!
 	if got := adf.GetLong(block, adf.OffsetSecondaryType); got != adf.STUserDir {
 		t.Errorf("Secondary type = %d, want %d (ST_USERDIR)", got, adf.STUserDir)
 	}
 
-	// Verify checksum is valid
 	checksum := adf.GetLong(block, adf.OffsetChecksum)
 	calculated := adf.CalculateChecksum(block, adf.OffsetChecksum)
 	if checksum != calculated {
@@ -90,7 +72,6 @@ func TestDirBlockDateFields(t *testing.T) {
 
 	days, mins, ticks := timeToAmiga(fixedTime)
 
-	// Check modification date at defined offsets
 	if got := adf.GetLong(block, adf.OffsetDateDays); got != days {
 		t.Errorf("ModifyTime days = %d, want %d", got, days)
 	}

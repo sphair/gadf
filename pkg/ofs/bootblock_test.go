@@ -6,7 +6,6 @@ import (
 	"github.com/sphair/gadf/pkg/adf"
 )
 
-// TestCreateBootBlock verifies bootblock structure and checksum
 func TestCreateBootBlock(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -20,24 +19,20 @@ func TestCreateBootBlock(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			bootblock := CreateBootBlock(tt.minimal)
 
-			// Should be 1024 bytes (2 blocks)
 			if len(bootblock) != adf.BlockSize*2 {
 				t.Errorf("Bootblock size = %d, want %d", len(bootblock), adf.BlockSize*2)
 			}
 
-			// Check DOS type at offset 0
 			dosType := adf.GetLong(bootblock, adf.BootOffsetDOSType)
 			if dosType != adf.DOSTypeOFS {
 				t.Errorf("DOS type = 0x%X, want 0x%X (DOS0)", dosType, adf.DOSTypeOFS)
 			}
 
-			// Check root block pointer at offset 8
 			rootPtr := adf.GetLong(bootblock, adf.BootOffsetRootPtr)
 			if rootPtr != adf.RootBlock {
 				t.Errorf("Root pointer = %d, want %d", rootPtr, adf.RootBlock)
 			}
 
-			// Verify checksum is valid
 			checksum := adf.GetLong(bootblock, adf.BootOffsetChecksum)
 			calculated := adf.CalculateBootChecksum(bootblock)
 			if checksum != calculated {

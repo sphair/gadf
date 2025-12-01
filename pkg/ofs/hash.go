@@ -4,11 +4,9 @@ import (
 	"strings"
 )
 
-// HashTableSize is the number of entries in the hash table
-// For a floppy disk: (512/4) - 56 = 72
+// HashTableSize is the number of entries in the hash table: (512/4) - 56 = 72
 const HashTableSize = 72
 
-// HashName calculates the Amiga filename hash
 // HashName implements AmigaDOS filename hashing.
 // Case-insensitive, returns index into directory hash table (0-71).
 func HashName(name string) int {

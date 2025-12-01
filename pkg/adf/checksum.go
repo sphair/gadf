@@ -8,7 +8,7 @@ func CalculateChecksum(block []byte, checksumIndex int) uint32 {
 	var sum uint32 = 0
 	numLongs := len(block) / 4
 
-	for i := 0; i < numLongs; i++ {
+	for i := range numLongs {
 		if i != checksumIndex {
 			sum += GetLong(block, i)
 		}
@@ -24,7 +24,7 @@ func CalculateBootChecksum(bootblock []byte) uint32 {
 	var checksum uint32 = 0
 	numLongs := len(bootblock) / 4
 
-	for i := 0; i < numLongs; i++ {
+	for i := range numLongs {
 		if i == BootOffsetChecksum { // Skip checksum position
 			continue
 		}
@@ -48,18 +48,12 @@ func CalculateBootChecksum(bootblock []byte) uint32 {
 
 // SetBlockChecksum calculates and sets the checksum for a standard block
 func SetBlockChecksum(block []byte, checksumIndex int) {
-	// Clear existing checksum
-	PutLong(block, checksumIndex, 0)
-	// Calculate and set new checksum
 	checksum := CalculateChecksum(block, checksumIndex)
 	PutLong(block, checksumIndex, checksum)
 }
 
 // SetBootChecksum calculates and sets the bootblock checksum
 func SetBootChecksum(bootblock []byte) {
-	// Clear existing checksum
-	PutLong(bootblock, BootOffsetChecksum, 0)
-	// Calculate and set new checksum
 	checksum := CalculateBootChecksum(bootblock)
 	PutLong(bootblock, BootOffsetChecksum, checksum)
 }
