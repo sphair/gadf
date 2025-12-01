@@ -83,35 +83,35 @@ func TestRootBlockCreateBlock(t *testing.T) {
 	}
 
 	// Verify type at offset 0: T_HEADER (2)
-	if got := adf.GetLong(block, 0); got != adf.TypeHeader {
+	if got := adf.GetLong(block, adf.OffsetBlockType); got != adf.TypeHeader {
 		t.Errorf("Type = %d, want %d (T_HEADER)", got, adf.TypeHeader)
 	}
 
 	// Verify header key at offset 1: 0 (unused for rootblock)
-	if got := adf.GetLong(block, 1); got != 0 {
+	if got := adf.GetLong(block, adf.OffsetHeaderKey); got != 0 {
 		t.Errorf("Header key = %d, want 0", got)
 	}
 
 	// Verify hash table size at offset 3: 72
-	if got := adf.GetLong(block, 3); got != HashTableSize {
+	if got := adf.GetLong(block, adf.OffsetHashTableSize); got != HashTableSize {
 		t.Errorf("Hash table size = %d, want %d", got, HashTableSize)
 	}
 
 	// Verify hash table entries (offset 6-77)
-	if got := adf.GetLong(block, 6); got != 100 {
+	if got := adf.GetLong(block, adf.OffsetHashTable); got != 100 {
 		t.Errorf("HashTable[0] = %d, want 100", got)
 	}
-	if got := adf.GetLong(block, 6+71); got != 200 {
+	if got := adf.GetLong(block, adf.OffsetHashTable+71); got != 200 {
 		t.Errorf("HashTable[71] = %d, want 200", got)
 	}
 
-	// Verify bitmap flag at offset -50
-	if got := adf.GetLong(block, -50); got != adf.BitmapValid {
+	// Verify bitmap flag at defined offset
+	if got := adf.GetLong(block, adf.OffsetBitmapFlag); got != adf.BitmapValid {
 		t.Errorf("Bitmap flag = 0x%X, want 0x%X", got, adf.BitmapValid)
 	}
 
-	// Verify bitmap block pointer at offset -49
-	if got := adf.GetLong(block, -49); got != 881 {
+	// Verify bitmap block pointer
+	if got := adf.GetLong(block, adf.OffsetBitmapPages); got != 881 {
 		t.Errorf("Bitmap block = %d, want 881", got)
 	}
 
@@ -122,13 +122,13 @@ func TestRootBlockCreateBlock(t *testing.T) {
 	}
 
 	// Verify secondary type at offset -1: ST_ROOT (1)
-	if got := adf.GetLong(block, -1); got != adf.STRoot {
+	if got := adf.GetLong(block, adf.OffsetSecondaryType); got != adf.STRoot {
 		t.Errorf("Secondary type = %d, want %d (ST_ROOT)", got, adf.STRoot)
 	}
 
 	// Verify checksum is valid
-	checksum := adf.GetLong(block, 5)
-	calculated := adf.CalculateChecksum(block, 5)
+	checksum := adf.GetLong(block, adf.OffsetChecksum)
+	calculated := adf.CalculateChecksum(block, adf.OffsetChecksum)
 	if checksum != calculated {
 		t.Errorf("Checksum mismatch: stored 0x%X, calculated 0x%X", checksum, calculated)
 	}
@@ -146,36 +146,36 @@ func TestRootBlockDateFields(t *testing.T) {
 
 	days, mins, ticks := timeToAmiga(fixedTime)
 
-	// Check modification date at offset -23, -22, -21
-	if got := adf.GetLong(block, -23); got != days {
+	// Check modification date
+	if got := adf.GetLong(block, adf.OffsetDateDays); got != days {
 		t.Errorf("ModifyTime days = %d, want %d", got, days)
 	}
-	if got := adf.GetLong(block, -22); got != mins {
+	if got := adf.GetLong(block, adf.OffsetDateMins); got != mins {
 		t.Errorf("ModifyTime mins = %d, want %d", got, mins)
 	}
-	if got := adf.GetLong(block, -21); got != ticks {
+	if got := adf.GetLong(block, adf.OffsetDateTicks); got != ticks {
 		t.Errorf("ModifyTime ticks = %d, want %d", got, ticks)
 	}
 
-	// Check disk date at offset -10, -9, -8
-	if got := adf.GetLong(block, -10); got != days {
+	// Check disk date
+	if got := adf.GetLong(block, adf.OffsetDiskDateDays); got != days {
 		t.Errorf("DiskTime days = %d, want %d", got, days)
 	}
-	if got := adf.GetLong(block, -9); got != mins {
+	if got := adf.GetLong(block, adf.OffsetDiskDateMins); got != mins {
 		t.Errorf("DiskTime mins = %d, want %d", got, mins)
 	}
-	if got := adf.GetLong(block, -8); got != ticks {
+	if got := adf.GetLong(block, adf.OffsetDiskDateTicks); got != ticks {
 		t.Errorf("DiskTime ticks = %d, want %d", got, ticks)
 	}
 
-	// Check creation date at offset -7, -6, -5
-	if got := adf.GetLong(block, -7); got != days {
+	// Check creation date
+	if got := adf.GetLong(block, adf.OffsetCreateDateDays); got != days {
 		t.Errorf("CreateTime days = %d, want %d", got, days)
 	}
-	if got := adf.GetLong(block, -6); got != mins {
+	if got := adf.GetLong(block, adf.OffsetCreateDateMins); got != mins {
 		t.Errorf("CreateTime mins = %d, want %d", got, mins)
 	}
-	if got := adf.GetLong(block, -5); got != ticks {
+	if got := adf.GetLong(block, adf.OffsetCreateDateTicks); got != ticks {
 		t.Errorf("CreateTime ticks = %d, want %d", got, ticks)
 	}
 }

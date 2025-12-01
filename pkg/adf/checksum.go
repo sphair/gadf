@@ -19,13 +19,13 @@ func CalculateChecksum(block []byte, checksumIndex int) uint32 {
 
 // CalculateBootChecksum calculates the bootblock checksum
 // Algorithm: sum all longs with overflow carry, then NOT
-// The checksum at offset 4 (long index 1) is treated as 0 during calculation
+// The checksum at long index BootOffsetChecksum is treated as 0 during calculation
 func CalculateBootChecksum(bootblock []byte) uint32 {
 	var checksum uint32 = 0
 	numLongs := len(bootblock) / 4
 
 	for i := 0; i < numLongs; i++ {
-		if i == 1 { // Skip checksum position
+		if i == BootOffsetChecksum { // Skip checksum position
 			continue
 		}
 
@@ -58,9 +58,8 @@ func SetBlockChecksum(block []byte, checksumIndex int) {
 // SetBootChecksum calculates and sets the bootblock checksum
 func SetBootChecksum(bootblock []byte) {
 	// Clear existing checksum
-	PutLong(bootblock, 1, 0)
+	PutLong(bootblock, BootOffsetChecksum, 0)
 	// Calculate and set new checksum
 	checksum := CalculateBootChecksum(bootblock)
-	PutLong(bootblock, 1, checksum)
+	PutLong(bootblock, BootOffsetChecksum, checksum)
 }
-

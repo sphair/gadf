@@ -39,27 +39,27 @@ func (eb *ExtensionBlock) CreateBlock() []byte {
 	block := make([]byte, adf.BlockSize)
 
 	// Type at offset 0: T_LIST (16)
-	adf.PutLong(block, 0, adf.TypeList)
+	adf.PutLong(block, adf.OffsetBlockType, adf.TypeList)
 
 	// Header key (file header pointer) at offset 4
-	adf.PutLong(block, 1, eb.HeaderKey)
+	adf.PutLong(block, adf.OffsetHeaderKey, eb.HeaderKey)
 
 	// High seq (number of data blocks in this extension) at offset 8
-	adf.PutLong(block, 2, uint32(len(eb.DataBlocks)))
+	adf.PutLong(block, adf.OffsetHighSeq, uint32(len(eb.DataBlocks)))
 
-	// Data blocks table: stored in reverse order starting at offset -51
+	// Data blocks table: stored in reverse order starting at OffsetFirstDataPtr
 	for i, db := range eb.DataBlocks {
-		adf.PutLong(block, -51-i, db)
+		adf.PutLong(block, adf.OffsetFirstDataPtr-i, db)
 	}
 
-	// Extension at offset -2 (next extension block, or 0)
-	adf.PutLong(block, -2, eb.Extension)
+	// Extension pointer (next extension block, or 0)
+	adf.PutLong(block, adf.OffsetExtension, eb.Extension)
 
-	// Secondary type at offset -1: ST_FILE (-3 as uint32)
-	adf.PutLong(block, -1, adf.STFile)
+	// Secondary type: ST_FILE (-3)
+	adf.PutLong(block, adf.OffsetSecondaryType, adf.STFile)
 
-	// Calculate and set checksum at offset 5
-	adf.SetBlockChecksum(block, 5)
+	// Calculate and set checksum
+	adf.SetBlockChecksum(block, adf.OffsetChecksum)
 
 	return block
 }
@@ -69,4 +69,3 @@ func (eb *ExtensionBlock) WriteBlock(disk *adf.Disk) error {
 	block := eb.CreateBlock()
 	return disk.WriteBlock(int(eb.BlockNum), block)
 }
-

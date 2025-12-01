@@ -12,15 +12,15 @@ const MaxDataBlocks = 72
 
 // FileHeader represents an OFS file header block
 type FileHeader struct {
-	BlockNum    uint32     // This block's number
-	Parent      uint32     // Parent directory block number
-	Name        string     // Filename (max 30 chars)
-	FileSize    uint32     // File size in bytes
-	DataBlocks  []uint32   // Data block pointers (max 72)
-	Extension   uint32     // First file extension block (0 if none)
-	HashChain   uint32     // Next entry with same hash (0 if none)
-	ModifyTime  time.Time
-	Protection  uint32     // Protection flags (0 = default)
+	BlockNum   uint32   // This block's number
+	Parent     uint32   // Parent directory block number
+	Name       string   // Filename (max 30 chars)
+	FileSize   uint32   // File size in bytes
+	DataBlocks []uint32 // Data block pointers (max 72)
+	Extension  uint32   // First file extension block (0 if none)
+	HashChain  uint32   // Next entry with same hash (0 if none)
+	ModifyTime time.Time
+	Protection uint32 // Protection flags (0 = default)
 
 	extensions []*ExtensionBlock // owned extension blocks (written by WriteBlock)
 }
@@ -93,63 +93,63 @@ func (fh *FileHeader) CreateBlock() []byte {
 	block := make([]byte, adf.BlockSize)
 
 	// Type at offset 0: T_HEADER (2)
-	adf.PutLong(block, 0, adf.TypeHeader)
+	adf.PutLong(block, adf.OffsetBlockType, adf.TypeHeader)
 
 	// Header key (self pointer) at offset 4
-	adf.PutLong(block, 1, fh.BlockNum)
+	adf.PutLong(block, adf.OffsetHeaderKey, fh.BlockNum)
 
 	// High seq (number of data blocks in this header) at offset 8
-	adf.PutLong(block, 2, uint32(len(fh.DataBlocks)))
+	adf.PutLong(block, adf.OffsetHighSeq, uint32(len(fh.DataBlocks)))
 
 	// Data size at offset 12: unused (0)
-	adf.PutLong(block, 3, 0)
+	adf.PutLong(block, adf.OffsetHashTableSize, 0)
 
 	// First data at offset 16
 	if len(fh.DataBlocks) > 0 {
-		adf.PutLong(block, 4, fh.DataBlocks[0])
+		adf.PutLong(block, adf.OffsetFirstDataLong, fh.DataBlocks[0])
 	}
 
 	// Checksum at offset 20: calculated later
 	// adf.PutLong(block, 5, 0)
 
 	// Data blocks table at offset 24
-	// Data blocks are stored in reverse order: first block at offset -51, last at -51-(n-1)
+	// Data blocks are stored in reverse order: first block at OffsetFirstDataPtr
 	for i, db := range fh.DataBlocks {
-		adf.PutLong(block, -51-i, db)
+		adf.PutLong(block, adf.OffsetFirstDataPtr-i, db)
 	}
 
-	// Protection at offset -48
-	adf.PutLong(block, -48, fh.Protection)
+	// Protection
+	adf.PutLong(block, adf.OffsetProtection, fh.Protection)
 
-	// Byte size at offset -47
-	adf.PutLong(block, -47, fh.FileSize)
+	// Byte size
+	adf.PutLong(block, adf.OffsetFileSize, fh.FileSize)
 
 	// Comment at offset -46 (BCPL string, max 79 chars) - empty
 	// adf.PutBStr(block, -46, 79, "")
 
-	// Modify date at offset -23 to -21
+	// Modify date
 	days, mins, ticks := timeToAmiga(fh.ModifyTime)
-	adf.PutLong(block, -23, days)
-	adf.PutLong(block, -22, mins)
-	adf.PutLong(block, -21, ticks)
+	adf.PutLong(block, adf.OffsetDateDays, days)
+	adf.PutLong(block, adf.OffsetDateMins, mins)
+	adf.PutLong(block, adf.OffsetDateTicks, ticks)
 
 	// Name
 	adf.PutBStr(block, adf.OffsetName, adf.MaxFilenameLen, fh.Name)
 
-	// Hash chain at offset -4
-	adf.PutLong(block, -4, fh.HashChain)
+	// Hash chain pointer
+	adf.PutLong(block, adf.OffsetNextHash, fh.HashChain)
 
-	// Parent at offset -3
-	adf.PutLong(block, -3, fh.Parent)
+	// Parent pointer
+	adf.PutLong(block, adf.OffsetParent, fh.Parent)
 
-	// Extension at offset -2
-	adf.PutLong(block, -2, fh.Extension)
+	// Extension pointer
+	adf.PutLong(block, adf.OffsetExtension, fh.Extension)
 
-	// Secondary type at offset -1: ST_FILE (-3 as uint32)
-	adf.PutLong(block, -1, adf.STFile)
+	// Secondary type: ST_FILE (-3)
+	adf.PutLong(block, adf.OffsetSecondaryType, adf.STFile)
 
-	// Calculate and set checksum at offset 5
-	adf.SetBlockChecksum(block, 5)
+	// Calculate and set checksum
+	adf.SetBlockChecksum(block, adf.OffsetChecksum)
 
 	return block
 }
@@ -168,4 +168,3 @@ func (fh *FileHeader) WriteBlock(disk *adf.Disk) error {
 	}
 	return nil
 }
-

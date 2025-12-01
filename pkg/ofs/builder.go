@@ -1,3 +1,4 @@
+// Package ofs provides OFS (Old File System) structures for AmigaDOS 1.2+
 package ofs
 
 import (
@@ -17,9 +18,9 @@ type Builder struct {
 	label       string
 	minimalBoot bool // Use minimal bootblock (no expansion.library)
 
-	// Track directories we've created
+	// Track directories we've created (normalized paths using '/' separators)
 	directories map[string]*DirBlock // path -> DirBlock
-	
+
 	// Track all files added (full path on disk)
 	files []string
 }
@@ -54,6 +55,34 @@ func ValidateFilename(name string) error {
 	return nil
 }
 
+// normalizePath converts any host-specific separators into Amiga-style paths
+// and removes duplicate/leading/trailing separators.
+func normalizePath(path string) string {
+	path = strings.ReplaceAll(path, "\\", "/")
+	parts := strings.Split(path, "/")
+	filtered := make([]string, 0, len(parts))
+	for _, part := range parts {
+		if part != "" {
+			filtered = append(filtered, part)
+		}
+	}
+	return strings.Join(filtered, "/")
+}
+
+// joinAmigaPath joins path segments using '/' regardless of host OS.
+func joinAmigaPath(parent, child string) string {
+	parent = normalizePath(parent)
+	child = normalizePath(child)
+	switch {
+	case parent == "":
+		return child
+	case child == "":
+		return parent
+	default:
+		return parent + "/" + child
+	}
+}
+
 func (b *Builder) Build() error {
 	// Reserve the rootblock and bitmap block
 	b.bitmap.AllocateSpecific(adf.RootBlock)
@@ -73,7 +102,7 @@ func (b *Builder) Build() error {
 // allocateBlocks allocates n blocks and returns their block numbers
 func (b *Builder) allocateBlocks(n int) []uint32 {
 	blocks := make([]uint32, n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		blocks[i] = uint32(b.bitmap.AllocateNext())
 	}
 	return blocks
@@ -106,6 +135,8 @@ func (b *Builder) AddFile(dirPath, name string, data []byte) error {
 		return err
 	}
 
+	dirPath = normalizePath(dirPath)
+
 	// Get or create the parent directory
 	var parentBlock uint32
 	var parentDir *DirBlock // nil for root
@@ -121,8 +152,11 @@ func (b *Builder) AddFile(dirPath, name string, data []byte) error {
 		parentDir = dir
 	}
 
-	// Split file data into chunks
-	chunks := SplitFileData(data)
+	// Split file data into chunks (empty files do not allocate data blocks)
+	var chunks [][]byte
+	if len(data) > 0 {
+		chunks = SplitFileData(data)
+	}
 	numExtBlocks := RequiredExtensionBlocks(len(chunks))
 
 	// Check if we have enough space: 1 file header + extension blocks + data blocks
@@ -145,11 +179,7 @@ func (b *Builder) AddFile(dirPath, name string, data []byte) error {
 	fh.AssignDataBlocks(dataBlockNums, extBlockNums)
 
 	// Add to parent's hash table
-	if parentDir != nil {
-		fh.HashChain = parentDir.AddHashEntry(name, uint32(headerBlockNum))
-	} else {
-		fh.HashChain = b.rootBlock.AddHashEntry(name, uint32(headerBlockNum))
-	}
+	fh.HashChain = b.addHashEntry(parentDir, name, uint32(headerBlockNum))
 
 	// Write file header and extension blocks
 	if err := fh.WriteBlock(b.disk); err != nil {
@@ -179,7 +209,7 @@ func (b *Builder) AddFile(dirPath, name string, data []byte) error {
 	if dirPath == "" {
 		b.files = append(b.files, name)
 	} else {
-		b.files = append(b.files, filepath.Join(dirPath, name))
+		b.files = append(b.files, joinAmigaPath(dirPath, name))
 	}
 
 	return nil
@@ -197,35 +227,51 @@ func (b *Builder) AddFileFromDisk(dirPath, diskPath string) error {
 
 // getOrCreateDir gets or creates a directory at the specified path
 func (b *Builder) getOrCreateDir(path string) (*DirBlock, error) {
-	// Check if already exists
-	if dir, ok := b.directories[path]; ok {
+	normPath := normalizePath(path)
+	if normPath == "" {
+		return nil, nil
+	}
+
+	if dir, ok := b.directories[normPath]; ok {
 		return dir, nil
 	}
 
-	// Validate directory name
-	if err := ValidateFilename(path); err != nil {
-		return nil, fmt.Errorf("invalid directory name: %w", err)
+	parts := strings.Split(normPath, "/")
+	var parentDir *DirBlock
+	parentBlock := uint32(adf.RootBlock)
+	currentPath := ""
+
+	for _, part := range parts {
+		if err := ValidateFilename(part); err != nil {
+			return nil, fmt.Errorf("invalid directory name: %w", err)
+		}
+
+		currentPath = joinAmigaPath(currentPath, part)
+
+		if dir, ok := b.directories[currentPath]; ok {
+			parentDir = dir
+			parentBlock = dir.BlockNum
+			continue
+		}
+
+		blockNum := b.bitmap.AllocateNext()
+		if blockNum < 0 {
+			return nil, fmt.Errorf("disk full: cannot allocate directory block for %s", currentPath)
+		}
+
+		dir := NewDirBlock(uint32(blockNum), parentBlock, part)
+		dir.HashChain = b.addHashEntry(parentDir, part, uint32(blockNum))
+
+		if err := dir.WriteBlock(b.disk); err != nil {
+			return nil, fmt.Errorf("failed to write directory block for %s: %w", currentPath, err)
+		}
+
+		b.directories[currentPath] = dir
+		parentDir = dir
+		parentBlock = dir.BlockNum
 	}
 
-	// Allocate directory block
-	blockNum := b.bitmap.AllocateNext()
-	if blockNum < 0 {
-		return nil, fmt.Errorf("disk full: cannot allocate directory block for %s", path)
-	}
-
-	// Create directory block
-	dir := NewDirBlock(uint32(blockNum), adf.RootBlock, path)
-
-	// Add to root's hash table
-	dir.HashChain = b.rootBlock.AddHashEntry(path, uint32(blockNum))
-
-	// Write directory block
-	if err := dir.WriteBlock(b.disk); err != nil {
-		return nil, fmt.Errorf("failed to write directory block for %s: %w", path, err)
-	}
-
-	b.directories[path] = dir
-	return dir, nil
+	return b.directories[normPath], nil
 }
 
 // CreateStartupSequence creates the S/startup-sequence file
@@ -248,6 +294,8 @@ func (b *Builder) CreateStartupSequence(executableName string) error {
 func (b *Builder) AddDirectory(sourcePath, destPath string, flatten bool) ([]string, error) {
 	var added []string
 
+	destPath = normalizePath(destPath)
+
 	if flatten {
 		// Walk all files recursively and add them to the destination path
 		err := filepath.Walk(sourcePath, func(path string, info os.FileInfo, err error) error {
@@ -266,10 +314,11 @@ func (b *Builder) AddDirectory(sourcePath, destPath string, flatten bool) ([]str
 			}
 
 			// Track what was added
+			baseName := filepath.Base(path)
 			if destPath == "" {
-				added = append(added, filepath.Base(path))
+				added = append(added, baseName)
 			} else {
-				added = append(added, filepath.Join(destPath, filepath.Base(path)))
+				added = append(added, joinAmigaPath(destPath, baseName))
 			}
 
 			return nil
@@ -304,7 +353,7 @@ func (b *Builder) addDirectoryRecursive(sourcePath, destPath string) ([]string, 
 
 		if entry.IsDir() {
 			// Create the subdirectory on disk
-			subDestPath := filepath.Join(destPath, entry.Name())
+			subDestPath := joinAmigaPath(destPath, entry.Name())
 			if _, err := b.getOrCreateDir(subDestPath); err != nil {
 				return added, fmt.Errorf("failed to create directory %s: %w", subDestPath, err)
 			}
@@ -326,11 +375,18 @@ func (b *Builder) addDirectoryRecursive(sourcePath, destPath string) ([]string, 
 		if destPath == "" {
 			added = append(added, entry.Name())
 		} else {
-			added = append(added, filepath.Join(destPath, entry.Name()))
+			added = append(added, joinAmigaPath(destPath, entry.Name()))
 		}
 	}
 
 	return added, nil
+}
+
+func (b *Builder) addHashEntry(parentDir *DirBlock, name string, blockNum uint32) uint32 {
+	if parentDir != nil {
+		return parentDir.AddHashEntry(name, blockNum)
+	}
+	return b.rootBlock.AddHashEntry(name, blockNum)
 }
 
 // GetFreeBlocks returns the number of free blocks remaining
@@ -351,4 +407,3 @@ func (b *Builder) GetDirectories() []string {
 	}
 	return dirs
 }
-

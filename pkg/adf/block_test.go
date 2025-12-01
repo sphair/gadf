@@ -74,4 +74,3 @@ func TestPutGetBStr(t *testing.T) {
 		t.Errorf("GetBStr(-20) = %q, want %q", got, "AtEnd")
 	}
 }
-

@@ -1,6 +1,8 @@
 package ofs
 
 import (
+	"slices"
+
 	"github.com/sphair/gadf/pkg/adf"
 )
 
@@ -23,16 +25,14 @@ type DataBlock struct {
 
 // NewDataBlock creates a new OFS data block
 func NewDataBlock(blockNum, headerKey, seqNum uint32, data []byte) *DataBlock {
-	db := &DataBlock{
+	return &DataBlock{
 		BlockNum:  blockNum,
 		HeaderKey: headerKey,
 		SeqNum:    seqNum,
 		DataSize:  uint32(len(data)),
 		NextData:  0,
-		Data:      make([]byte, len(data)),
+		Data:      slices.Clone(data),
 	}
-	copy(db.Data, data)
-	return db
 }
 
 // CreateBlock creates the raw block data for the data block
@@ -40,19 +40,19 @@ func (db *DataBlock) CreateBlock() []byte {
 	block := make([]byte, adf.BlockSize)
 
 	// Type at offset 0: T_DATA (8)
-	adf.PutLong(block, 0, adf.TypeData)
+	adf.PutLong(block, adf.OffsetBlockType, adf.TypeData)
 
 	// Header key at offset 4
-	adf.PutLong(block, 1, db.HeaderKey)
+	adf.PutLong(block, adf.OffsetHeaderKey, db.HeaderKey)
 
 	// Sequence number at offset 8
-	adf.PutLong(block, 2, db.SeqNum)
+	adf.PutLong(block, adf.OffsetHighSeq, db.SeqNum)
 
 	// Data size at offset 12
-	adf.PutLong(block, 3, db.DataSize)
+	adf.PutLong(block, adf.OffsetHashTableSize, db.DataSize)
 
 	// Next data at offset 16
-	adf.PutLong(block, 4, db.NextData)
+	adf.PutLong(block, adf.OffsetFirstDataLong, db.NextData)
 
 	// Checksum at offset 20: calculated later
 	// adf.PutLong(block, 5, 0)
@@ -60,8 +60,8 @@ func (db *DataBlock) CreateBlock() []byte {
 	// Data at offset 24
 	copy(block[24:], db.Data)
 
-	// Calculate and set checksum at offset 5
-	adf.SetBlockChecksum(block, 5)
+	// Calculate and set checksum
+	adf.SetBlockChecksum(block, adf.OffsetChecksum)
 
 	return block
 }
@@ -90,4 +90,3 @@ func SplitFileData(data []byte) [][]byte {
 	}
 	return chunks
 }
-

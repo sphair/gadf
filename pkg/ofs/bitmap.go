@@ -106,17 +106,14 @@ func (bm *Bitmap) CountFree() int {
 func (bm *Bitmap) CreateBitmapBlock() []byte {
 	block := make([]byte, adf.BlockSize)
 
-	// Checksum at offset 0 (will be calculated later)
-	// Bitmap data starts at offset 4
-
 	// Copy bitmap data
 	for i, val := range bm.blocks {
-		adf.PutLong(block, 1+i, val)
+		adf.PutLong(block, adf.BitmapDataStartLong+i, val)
 	}
 
 	// Calculate and set checksum using bitmap checksum algorithm
 	// (same as normal checksum but at position 0)
-	adf.SetBlockChecksum(block, 0)
+	adf.SetBlockChecksum(block, adf.BitmapChecksumLong)
 
 	return block
 }
@@ -126,4 +123,3 @@ func (bm *Bitmap) WriteBitmapBlock(disk *adf.Disk, blockNum int) error {
 	block := bm.CreateBitmapBlock()
 	return disk.WriteBlock(blockNum, block)
 }
-

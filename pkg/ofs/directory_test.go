@@ -24,25 +24,25 @@ func TestDirBlockCreateBlock(t *testing.T) {
 	}
 
 	// Verify type at offset 0: T_HEADER (2)
-	if got := adf.GetLong(block, 0); got != adf.TypeHeader {
+	if got := adf.GetLong(block, adf.OffsetBlockType); got != adf.TypeHeader {
 		t.Errorf("Type = %d, want %d (T_HEADER)", got, adf.TypeHeader)
 	}
 
 	// Verify header key (self pointer) at offset 1 - differs from rootblock!
-	if got := adf.GetLong(block, 1); got != 100 {
+	if got := adf.GetLong(block, adf.OffsetHeaderKey); got != 100 {
 		t.Errorf("Header key = %d, want 100", got)
 	}
 
 	// Verify hash table entries (offset 6-77)
-	if got := adf.GetLong(block, 6); got != 150 {
+	if got := adf.GetLong(block, adf.OffsetHashTable); got != 150 {
 		t.Errorf("HashTable[0] = %d, want 150", got)
 	}
-	if got := adf.GetLong(block, 6+71); got != 250 {
+	if got := adf.GetLong(block, adf.OffsetHashTable+71); got != 250 {
 		t.Errorf("HashTable[71] = %d, want 250", got)
 	}
 
-	// Verify protection at offset -48
-	if got := adf.GetLong(block, -48); got != 0x0F {
+	// Verify protection at defined offset
+	if got := adf.GetLong(block, adf.OffsetProtection); got != 0x0F {
 		t.Errorf("Protection = 0x%X, want 0x0F", got)
 	}
 
@@ -53,28 +53,28 @@ func TestDirBlockCreateBlock(t *testing.T) {
 	}
 
 	// Verify hash chain at offset -4
-	if got := adf.GetLong(block, -4); got != 99 {
+	if got := adf.GetLong(block, adf.OffsetNextHash); got != 99 {
 		t.Errorf("Hash chain = %d, want 99", got)
 	}
 
 	// Verify parent at offset -3
-	if got := adf.GetLong(block, -3); got != 880 {
+	if got := adf.GetLong(block, adf.OffsetParent); got != 880 {
 		t.Errorf("Parent = %d, want 880", got)
 	}
 
 	// Verify extension at offset -2: 0 for OFS
-	if got := adf.GetLong(block, -2); got != 0 {
+	if got := adf.GetLong(block, adf.OffsetExtension); got != 0 {
 		t.Errorf("Extension = %d, want 0", got)
 	}
 
 	// Verify secondary type at offset -1: ST_USERDIR (2) - differs from rootblock!
-	if got := adf.GetLong(block, -1); got != adf.STUserDir {
+	if got := adf.GetLong(block, adf.OffsetSecondaryType); got != adf.STUserDir {
 		t.Errorf("Secondary type = %d, want %d (ST_USERDIR)", got, adf.STUserDir)
 	}
 
 	// Verify checksum is valid
-	checksum := adf.GetLong(block, 5)
-	calculated := adf.CalculateChecksum(block, 5)
+	checksum := adf.GetLong(block, adf.OffsetChecksum)
+	calculated := adf.CalculateChecksum(block, adf.OffsetChecksum)
 	if checksum != calculated {
 		t.Errorf("Checksum mismatch: stored 0x%X, calculated 0x%X", checksum, calculated)
 	}
@@ -90,14 +90,14 @@ func TestDirBlockDateFields(t *testing.T) {
 
 	days, mins, ticks := timeToAmiga(fixedTime)
 
-	// Check modification date at offset -23, -22, -21
-	if got := adf.GetLong(block, -23); got != days {
+	// Check modification date at defined offsets
+	if got := adf.GetLong(block, adf.OffsetDateDays); got != days {
 		t.Errorf("ModifyTime days = %d, want %d", got, days)
 	}
-	if got := adf.GetLong(block, -22); got != mins {
+	if got := adf.GetLong(block, adf.OffsetDateMins); got != mins {
 		t.Errorf("ModifyTime mins = %d, want %d", got, mins)
 	}
-	if got := adf.GetLong(block, -21); got != ticks {
+	if got := adf.GetLong(block, adf.OffsetDateTicks); got != ticks {
 		t.Errorf("ModifyTime ticks = %d, want %d", got, ticks)
 	}
 }

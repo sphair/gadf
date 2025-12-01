@@ -35,25 +35,47 @@ const (
 	STFile    = 0xFFFFFFFD // -3 as uint32, file header
 
 	// Bitmap
-	BitmapValid = 0xFFFFFFFF // All bits set = valid/free
+	BitmapValid         = 0xFFFFFFFF // All bits set = valid/free
+	BitmapChecksumLong  = 0          // Bitmap checksum long index
+	BitmapDataStartLong = 1          // First long of bitmap data (checksum at 0)
 
 	// Limits
 	MaxFilenameLen = 30
 
 	// Block layout offsets (as long indices, negative from end)
-	OffsetChecksum     = 5   // Checksum position in most blocks
-	OffsetHashTable    = 6   // Hash table start
-	OffsetBitmapFlag   = -50 // Bitmap valid flag
-	OffsetBitmapPages  = -49 // Bitmap block pointers
-	OffsetProtection   = -48 // Protection bits
-	OffsetFileSize     = -47 // File size in bytes
-	OffsetDateDays     = -23 // Modification date (days)
-	OffsetDateMins     = -22 // Modification date (minutes)
-	OffsetDateTicks    = -21 // Modification date (ticks)
-	OffsetName         = -20 // BCPL name string
-	OffsetFirstDataPtr = -51 // First data block pointer (file header)
+	OffsetBlockType       = 0   // Block type identifier (T_HEADER, etc.)
+	OffsetHeaderKey       = 1   // Self pointer / header key
+	OffsetHighSeq         = 2   // High sequence / data count
+	OffsetHashTableSize   = 3   // Hash table size (root blocks) / data size (data blocks)
+	OffsetFirstDataLong   = 4   // First data pointer (standard blocks)
+	OffsetChecksum        = 5   // Checksum position in most blocks
+	OffsetHashTable       = 6   // Hash table start
+	OffsetFirstDataPtr    = -51 // First data block pointer (file header)
+	OffsetBitmapFlag      = -50 // Bitmap valid flag
+	OffsetBitmapPages     = -49 // Bitmap block pointers
+	OffsetProtection      = -48 // Protection bits
+	OffsetFileSize        = -47 // File size in bytes
+	OffsetBitmapExtension = -24 // Bitmap extension block pointer
+	OffsetDateDays        = -23 // Modification date (days)
+	OffsetDateMins        = -22 // Modification date (minutes)
+	OffsetDateTicks       = -21 // Modification date (ticks)
+	OffsetName            = -20 // BCPL name string
+	OffsetDiskDateDays    = -10 // Disk alteration date (days)
+	OffsetDiskDateMins    = -9  // Disk alteration date (minutes)
+	OffsetDiskDateTicks   = -8  // Disk alteration date (ticks)
+	OffsetCreateDateDays  = -7  // Creation date (days)
+	OffsetCreateDateMins  = -6  // Creation date (minutes)
+	OffsetCreateDateTicks = -5  // Creation date (ticks)
+	OffsetNextHash        = -4  // Next hash entry pointer
+	OffsetParent          = -3  // Parent directory pointer
+	OffsetExtension       = -2  // Extension block pointer
+	OffsetSecondaryType   = -1  // Secondary type identifier
+
+	// Bootblock layout (long indices)
+	BootOffsetDOSType  = 0 // DOS type identifier
+	BootOffsetChecksum = 1 // Bootblock checksum field
+	BootOffsetRootPtr  = 2 // Root block pointer
 
 	// Boot code starts at byte offset 12
 	BootCodeOffset = 12
 )
-

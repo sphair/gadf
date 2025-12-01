@@ -119,11 +119,11 @@ func TestBitmapDiskFormat(t *testing.T) {
 	block := bm.CreateBitmapBlock()
 
 	// Helper to check bit in serialized bitmap
-	// Bitmap data: Long 1 (offset 4) = blocks 0-31, Long 2 = blocks 32-63, etc.
+	// Bitmap data: longs starting at BitmapDataStartLong map 32 blocks each.
 	isBitClear := func(blockNum int) bool {
 		longIdx := blockNum / 32
 		bitPos := uint(blockNum % 32)
-		longVal := adf.GetLong(block, 1+longIdx) // +1 because checksum is at position 0
+		longVal := adf.GetLong(block, adf.BitmapDataStartLong+longIdx)
 		return (longVal & (1 << bitPos)) == 0
 	}
 

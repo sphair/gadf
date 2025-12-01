@@ -57,49 +57,49 @@ func (db *DirBlock) CreateBlock() []byte {
 	block := make([]byte, adf.BlockSize)
 
 	// Type at offset 0: T_HEADER (2)
-	adf.PutLong(block, 0, adf.TypeHeader)
+	adf.PutLong(block, adf.OffsetBlockType, adf.TypeHeader)
 
 	// Header key (self pointer) at offset 4
-	adf.PutLong(block, 1, db.BlockNum)
+	adf.PutLong(block, adf.OffsetHeaderKey, db.BlockNum)
 
 	// Unused at offsets 8, 12, 16
-	adf.PutLong(block, 2, 0)
-	adf.PutLong(block, 3, 0)
-	adf.PutLong(block, 4, 0)
+	adf.PutLong(block, adf.OffsetHighSeq, 0)
+	adf.PutLong(block, adf.OffsetHashTableSize, 0)
+	adf.PutLong(block, adf.OffsetFirstDataLong, 0)
 
 	// Checksum at offset 20: calculated later
 
 	// Hash table at offset 24 (72 entries)
 	for i := 0; i < HashTableSize; i++ {
-		adf.PutLong(block, 6+i, db.HashTable[i])
+		adf.PutLong(block, adf.OffsetHashTable+i, db.HashTable[i])
 	}
 
-	// Protection at offset -48
-	adf.PutLong(block, -48, db.Protection)
+	// Protection bits
+	adf.PutLong(block, adf.OffsetProtection, db.Protection)
 
-	// Modify date at offset -23 to -21
+	// Modify date
 	days, mins, ticks := timeToAmiga(db.ModifyTime)
-	adf.PutLong(block, -23, days)
-	adf.PutLong(block, -22, mins)
-	adf.PutLong(block, -21, ticks)
+	adf.PutLong(block, adf.OffsetDateDays, days)
+	adf.PutLong(block, adf.OffsetDateMins, mins)
+	adf.PutLong(block, adf.OffsetDateTicks, ticks)
 
 	// Name
 	adf.PutBStr(block, adf.OffsetName, adf.MaxFilenameLen, db.Name)
 
-	// Hash chain at offset -4
-	adf.PutLong(block, -4, db.HashChain)
+	// Hash chain pointer
+	adf.PutLong(block, adf.OffsetNextHash, db.HashChain)
 
-	// Parent at offset -3
-	adf.PutLong(block, -3, db.Parent)
+	// Parent pointer
+	adf.PutLong(block, adf.OffsetParent, db.Parent)
 
-	// Extension at offset -2: 0 for OFS
-	adf.PutLong(block, -2, 0)
+	// Extension (unused for OFS)
+	adf.PutLong(block, adf.OffsetExtension, 0)
 
-	// Secondary type at offset -1: ST_USERDIR (2)
-	adf.PutLong(block, -1, adf.STUserDir)
+	// Secondary type: ST_USERDIR
+	adf.PutLong(block, adf.OffsetSecondaryType, adf.STUserDir)
 
 	// Calculate and set checksum at offset 5
-	adf.SetBlockChecksum(block, 5)
+	adf.SetBlockChecksum(block, adf.OffsetChecksum)
 
 	return block
 }
@@ -109,4 +109,3 @@ func (db *DirBlock) WriteBlock(disk *adf.Disk) error {
 	block := db.CreateBlock()
 	return disk.WriteBlock(int(db.BlockNum), block)
 }
-

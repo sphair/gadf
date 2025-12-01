@@ -4,12 +4,15 @@ Create bootable Amiga ADF disk images from executables.
 
 This tool creates ADF (Amiga Disk File) images that boot and run a specified executable, compatible with AmigaDOS 1.2+ using the OFS (Old File System).
 
+It was inspired by exe2adf (https://exe2adf.com/), but since that tool has no source code available, this tool was made.
+
+Based on documentation from http://lclevy.free.fr/adflib/adf_info.html
+
 ## Features
 
 - Creates bootable 880KB DD floppy disk images
 - Cross-platform (Windows, Linux, macOS)
 - Compatible with AmigaDOS 1.2+ (OFS filesystem)
-- Include additional files from directories
 
 ## Installation
 
@@ -83,4 +86,3 @@ The `-s` flag adds expansion.library code to suppress the shell window flash on 
 ## License
 
 This is free and unencumbered software released into the public domain. See [UNLICENSE](UNLICENSE) for details.
-

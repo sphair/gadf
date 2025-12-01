@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strings"
 
 	"github.com/sphair/gadf/pkg/adf"
@@ -170,7 +170,7 @@ func main() {
 			if !*flatten {
 				destDir = filepath.Base(item)
 			}
-			
+
 			if _, err := builder.AddDirectory(item, destDir, *flatten); err != nil {
 				fmt.Fprintf(os.Stderr, "Error: failed to add directory '%s': %v\n", item, err)
 				os.Exit(1)
@@ -210,15 +210,15 @@ func main() {
 
 	// Display directory structure
 	fmt.Println("ADF structure:")
-	
+
 	// Get directories and files
 	dirs := builder.GetDirectories()
 	files := builder.GetFileList()
-	
+
 	// Build a tree structure
 	filesByDir := make(map[string][]string)
 	rootFiles := []string{}
-	
+
 	for _, file := range files {
 		dir := filepath.Dir(file)
 		if dir == "." {
@@ -227,24 +227,23 @@ func main() {
 			filesByDir[dir] = append(filesByDir[dir], filepath.Base(file))
 		}
 	}
-	
+
 	// Sort directories
-	sort.Strings(dirs)
-	sort.Strings(rootFiles)
-	
+	slices.Sort(dirs)
+	slices.Sort(rootFiles)
+
 	// Print root files
 	for _, file := range rootFiles {
 		fmt.Printf("  %s\n", file)
 	}
-	
+
 	// Print directories and their contents
 	for _, dir := range dirs {
 		fmt.Printf("  %s/\n", dir)
 		dirFiles := filesByDir[dir]
-		sort.Strings(dirFiles)
+		slices.Sort(dirFiles)
 		for _, file := range dirFiles {
 			fmt.Printf("    %s\n", file)
 		}
 	}
 }
-
