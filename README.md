@@ -17,7 +17,6 @@ Based on documentation from http://lclevy.free.fr/adflib/adf_info.html
 ## Installation
 
 ```bash
-cd src
 go build -o gadf ./cmd/gadf
 ```
 
