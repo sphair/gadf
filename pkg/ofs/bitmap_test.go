@@ -95,7 +95,7 @@ func TestBitmapFull(t *testing.T) {
 	}
 }
 
-// TestBitmapDiskFormat verifies on-disk format: bit N = block N, set=free, clear=allocated
+// TestBitmapDiskFormat verifies on-disk format: bit N = block N+2, set=free, clear=allocated
 func TestBitmapDiskFormat(t *testing.T) {
 	bm := NewBitmap()
 
@@ -105,14 +105,13 @@ func TestBitmapDiskFormat(t *testing.T) {
 	block := bm.CreateBitmapBlock()
 
 	isBitClear := func(blockNum int) bool {
-		longIdx := blockNum / 32
-		bitPos := uint(blockNum % 32)
-		longVal := adf.GetLong(block, adf.BitmapDataStartLong+longIdx)
-		return (longVal & (1 << bitPos)) == 0
+		bitNum := blockNum - adf.ReservedBlocks
+		longVal := adf.GetLong(block, adf.BitmapDataStartLong+bitNum/32)
+		return (longVal & (1 << uint(bitNum%32))) == 0
 	}
 
-	if !isBitClear(0) || !isBitClear(1) {
-		t.Error("Bootblock (0-1) should be allocated")
+	if got := adf.GetLong(block, adf.BitmapDataStartLong); got&1 == 0 {
+		t.Error("Bit 0 of first long (block 2) should be free")
 	}
 	if !isBitClear(100) {
 		t.Error("Block 100 should be allocated")
@@ -120,10 +119,16 @@ func TestBitmapDiskFormat(t *testing.T) {
 	if !isBitClear(adf.RootBlock) {
 		t.Errorf("Block %d (rootblock) should be allocated", adf.RootBlock)
 	}
-	if isBitClear(2) {
-		t.Error("Block 2 should be free")
+	if isBitClear(99) || isBitClear(101) {
+		t.Error("Blocks 99 and 101 should be free")
 	}
 	if isBitClear(500) {
 		t.Error("Block 500 should be free")
+	}
+	if isBitClear(adf.TotalBlocks - 1) {
+		t.Error("Last block should be free")
+	}
+	if got := adf.GetLong(block, adf.BitmapDataStartLong+54); got != 0x3FFFFFFF {
+		t.Errorf("Last bitmap long = 0x%08X, want 0x3FFFFFFF", got)
 	}
 }

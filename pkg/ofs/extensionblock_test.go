@@ -25,8 +25,13 @@ func TestExtensionBlockCreateBlock(t *testing.T) {
 	}
 
 	headerKey := adf.GetLong(block, adf.OffsetHeaderKey)
-	if headerKey != 50 {
-		t.Errorf("Header key = %d, want 50", headerKey)
+	if headerKey != 100 {
+		t.Errorf("Header key = %d, want 100 (self)", headerKey)
+	}
+
+	parent := adf.GetLong(block, adf.OffsetParent)
+	if parent != 50 {
+		t.Errorf("Parent = %d, want 50 (file header)", parent)
 	}
 
 	highSeq := adf.GetLong(block, adf.OffsetHighSeq)
@@ -96,9 +101,11 @@ func TestExtensionBlockChaining(t *testing.T) {
 	}
 
 	for i, block := range [][]byte{block1, block2, block3} {
-		headerKey := adf.GetLong(block, adf.OffsetHeaderKey)
-		if headerKey != 50 {
-			t.Errorf("block%d header key = %d, want 50", i+1, headerKey)
+		if self := adf.GetLong(block, adf.OffsetHeaderKey); self != uint32(100+i) {
+			t.Errorf("block%d header key = %d, want %d", i+1, self, 100+i)
+		}
+		if parent := adf.GetLong(block, adf.OffsetParent); parent != 50 {
+			t.Errorf("block%d parent = %d, want 50", i+1, parent)
 		}
 	}
 }

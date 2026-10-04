@@ -16,6 +16,7 @@ const (
 	// Key block positions
 	BootBlockStart = 0
 	BootBlockEnd   = 1
+	ReservedBlocks = 2   // de_Reserved: blocks not tracked by the bitmap
 	RootBlock      = 880 // Middle of disk
 	BitmapBlock    = 881 // First bitmap block
 
