@@ -16,7 +16,7 @@ import (
 	"github.com/sphair/gadf/pkg/ofs"
 )
 
-const version = "1.0.1"
+var version = "dev"
 
 func main() {
 	inputFile := flag.String("i", "", "Input executable file (required)")

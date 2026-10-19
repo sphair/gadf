@@ -4,8 +4,9 @@
 # Build output
 /gadf
 /build/
+*.exe
+*.zip
 
-# gadf writes ADFs to the current directory by default
 *.adf
+*.md
 
-FUTURE.md

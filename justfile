@@ -8,6 +8,7 @@ out := "build"
 fixtures := out / "fixtures"
 bin := "gadf" + if os_family() == "windows" { ".exe" } else { "" }
 devtool := "go run ./internal/devtool"
+version := "1.0.1"
 # Minimal Amiga hunk executable that just returns 0
 exe := fixtures / "Test"
 
@@ -23,6 +24,12 @@ default:
 [group('dev')]
 build:
     go build -o {{bin}} ./cmd/gadf
+
+# Build and package the Windows release
+[group('dev')]
+release:
+    go build -trimpath -ldflags="-s -w -X main.version={{version}}" -o gadf.exe ./cmd/gadf
+    Compress-Archive -Path gadf.exe -DestinationPath gadf-windows-{{version}}.zip -Force
 
 # Run vet and tests
 [group('dev')]
