@@ -4,37 +4,41 @@ import (
 	"github.com/sphair/gadf/pkg/adf"
 )
 
-// Bitmap manages block allocation for the disk
-// Bit set = free, bit clear = allocated
+// Bitmap manages block allocation for the disk.
+// Bit set = free, bit clear = allocated. Bit 0 corresponds to block
+// adf.ReservedBlocks (2); the bootblocks are not part of the bitmap.
 type Bitmap struct {
 	blocks []uint32 // Bitmap data (each uint32 tracks 32 blocks)
 }
 
+const bitmapBits = adf.TotalBlocks - adf.ReservedBlocks
+
 // NewBitmap creates a new bitmap for a floppy disk
 func NewBitmap() *Bitmap {
-	// DD floppy: 1760 blocks = 55 uint32s (55 * 32 = 1760 bits)
+	// DD floppy: 1758 allocatable blocks = 55 uint32s
 	bm := &Bitmap{
-		blocks: make([]uint32, 55),
+		blocks: make([]uint32, (bitmapBits+31)/32),
 	}
-	// All bits set = all blocks free
 	for i := range bm.blocks {
 		bm.blocks[i] = adf.BitmapValid
 	}
-	// Pre-allocate bootblock (blocks 0-1)
-	bm.Allocate(0)
-	bm.Allocate(1)
+	// Clear unused trailing bits beyond the last block
+	if rem := bitmapBits % 32; rem != 0 {
+		bm.blocks[len(bm.blocks)-1] = (1 << rem) - 1
+	}
 	return bm
 }
 
 // blockToBitmapPos converts a block number to bitmap position
 func blockToBitmapPos(blockNum int) (int, uint) {
-	return blockNum / 32, uint(blockNum % 32)
+	bitNum := blockNum - adf.ReservedBlocks
+	return bitNum / 32, uint(bitNum % 32)
 }
 
 // IsAllocated checks if a block is allocated
 func (bm *Bitmap) IsAllocated(blockNum int) bool {
-	if blockNum < 0 || blockNum >= adf.TotalBlocks {
-		return true // Invalid blocks treated as allocated
+	if blockNum < adf.ReservedBlocks || blockNum >= adf.TotalBlocks {
+		return true // Reserved and invalid blocks treated as allocated
 	}
 	idx, bit := blockToBitmapPos(blockNum)
 	return (bm.blocks[idx] & (1 << bit)) == 0
@@ -42,7 +46,7 @@ func (bm *Bitmap) IsAllocated(blockNum int) bool {
 
 // Allocate marks a block as allocated
 func (bm *Bitmap) Allocate(blockNum int) {
-	if blockNum < 0 || blockNum >= adf.TotalBlocks {
+	if blockNum < adf.ReservedBlocks || blockNum >= adf.TotalBlocks {
 		return
 	}
 	idx, bit := blockToBitmapPos(blockNum)
@@ -51,7 +55,7 @@ func (bm *Bitmap) Allocate(blockNum int) {
 
 // Free marks a block as free
 func (bm *Bitmap) Free(blockNum int) {
-	if blockNum < 0 || blockNum >= adf.TotalBlocks {
+	if blockNum < adf.ReservedBlocks || blockNum >= adf.TotalBlocks {
 		return
 	}
 	idx, bit := blockToBitmapPos(blockNum)
@@ -71,7 +75,7 @@ func (bm *Bitmap) AllocateNext() int {
 		}
 	}
 	// Wrap around to beginning (after bootblock)
-	for blockNum := 2; blockNum < adf.RootBlock; blockNum++ {
+	for blockNum := adf.ReservedBlocks; blockNum < adf.RootBlock; blockNum++ {
 		if !bm.IsAllocated(blockNum) {
 			bm.Allocate(blockNum)
 			return blockNum
@@ -93,7 +97,7 @@ func (bm *Bitmap) AllocateSpecific(blockNum int) bool {
 // CountFree returns the number of free blocks
 func (bm *Bitmap) CountFree() int {
 	count := 0
-	for blockNum := 0; blockNum < adf.TotalBlocks; blockNum++ {
+	for blockNum := adf.ReservedBlocks; blockNum < adf.TotalBlocks; blockNum++ {
 		if !bm.IsAllocated(blockNum) {
 			count++
 		}

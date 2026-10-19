@@ -40,7 +40,7 @@ func (eb *ExtensionBlock) CreateBlock() []byte {
 
 	// Header
 	adf.PutLong(block, adf.OffsetBlockType, adf.TypeList)
-	adf.PutLong(block, adf.OffsetHeaderKey, eb.HeaderKey)
+	adf.PutLong(block, adf.OffsetHeaderKey, eb.BlockNum)
 	adf.PutLong(block, adf.OffsetHighSeq, uint32(len(eb.DataBlocks)))
 
 	// Data block pointers (stored in reverse order)
@@ -49,6 +49,7 @@ func (eb *ExtensionBlock) CreateBlock() []byte {
 	}
 
 	// Footer
+	adf.PutLong(block, adf.OffsetParent, eb.HeaderKey)
 	adf.PutLong(block, adf.OffsetExtension, eb.Extension)
 	adf.PutLong(block, adf.OffsetSecondaryType, adf.STFile)
 
