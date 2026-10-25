@@ -4,6 +4,7 @@
 # Build output
 /gadf
 /build/
+/dist/
 
 # gadf writes ADFs to the current directory by default
 *.adf

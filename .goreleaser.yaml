@@ -1,0 +1,52 @@
+version: 2
+
+project_name: gadf
+
+builds:
+  - id: gadf
+    main: ./cmd/gadf
+    binary: gadf
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - darwin
+      - linux
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      - goos: windows
+        goarch: arm64
+    ldflags:
+      - -s -w -X main.version={{.Version}}
+
+archives:
+  - formats:
+      - tar.gz
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+    files:
+      - README.md
+      - UNLICENSE
+
+checksum:
+  name_template: checksums.txt
+
+homebrew_casks:
+  - name: gadf
+    skip_upload: auto
+    binaries:
+      - gadf
+    repository:
+      owner: sphair
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    homepage: https://github.com/sphair/gadf
+    description: Create bootable Amiga ADF disk images from executables
+    caveats: |
+      This binary is not signed or notarized. If macOS blocks it and you trust
+      this release, clear its quarantine attribute with:
+      xattr -d com.apple.quarantine "$(command -v gadf)"

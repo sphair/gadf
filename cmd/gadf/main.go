@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime/debug"
 	"slices"
 	"strings"
 
@@ -16,7 +17,19 @@ import (
 	"github.com/sphair/gadf/pkg/ofs"
 )
 
-const version = "1.0.1"
+var version = "dev"
+
+func versionString() string {
+	if version != "dev" {
+		return version
+	}
+
+	info, ok := debug.ReadBuildInfo()
+	if ok && info.Main.Version != "" && info.Main.Version != "(devel)" {
+		return info.Main.Version
+	}
+	return version
+}
 
 func main() {
 	inputFile := flag.String("i", "", "Input executable file (required)")
@@ -28,7 +41,7 @@ func main() {
 	showHelp := flag.Bool("h", false, "Show help")
 
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "gadf v%s - Create bootable Amiga ADF disk images\n\n", version)
+		fmt.Fprintf(os.Stderr, "gadf v%s - Create bootable Amiga ADF disk images\n\n", versionString())
 		fmt.Fprintf(os.Stderr, "Usage: gadf -i <executable> [options] [files/directories...]\n\n")
 		fmt.Fprintf(os.Stderr, "Options:\n")
 		fmt.Fprintf(os.Stderr, "  -i <file>      Input executable file (required)\n")
@@ -58,7 +71,7 @@ func main() {
 	flag.Parse()
 
 	if *showVersion {
-		fmt.Printf("gadf v%s\n", version)
+		fmt.Printf("gadf v%s\n", versionString())
 		fmt.Println("Create bootable Amiga ADF disk images from executables")
 		fmt.Println("Compatible with AmigaDOS 1.2+ (OFS filesystem)")
 		os.Exit(0)
