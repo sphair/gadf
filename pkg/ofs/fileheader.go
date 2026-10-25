@@ -70,7 +70,7 @@ func (fh *FileHeader) AssignDataBlocks(dataBlockNums []uint32, extBlockNums []ui
 	}
 
 	// Create extension blocks for the rest
-	for i := 0; i < len(extBlockNums); i++ {
+	for i := range extBlockNums {
 		eb := NewExtensionBlock(extBlockNums[i], fh.BlockNum)
 		for j := 0; j < MaxDataBlocks && idx < len(dataBlockNums); j++ {
 			eb.AddDataBlock(dataBlockNums[idx])

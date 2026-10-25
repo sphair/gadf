@@ -135,7 +135,7 @@ func TestAssignDataBlocksMultipleExtensions(t *testing.T) {
 func TestFileHeaderAddDataBlock(t *testing.T) {
 	fh := NewFileHeader(100, 880, "test", 1000)
 
-	for i := 0; i < MaxDataBlocks; i++ {
+	for i := range MaxDataBlocks {
 		ok := fh.AddDataBlock(uint32(200 + i))
 		if !ok {
 			t.Errorf("AddDataBlock(%d) returned false, want true", i)

@@ -113,7 +113,7 @@ func TestExtensionBlockChaining(t *testing.T) {
 func TestExtensionBlockMaxDataBlocks(t *testing.T) {
 	eb := NewExtensionBlock(100, 50)
 
-	for i := 0; i < MaxDataBlocks; i++ {
+	for i := range MaxDataBlocks {
 		if !eb.AddDataBlock(uint32(200 + i)) {
 			t.Fatalf("AddDataBlock failed at %d", i)
 		}

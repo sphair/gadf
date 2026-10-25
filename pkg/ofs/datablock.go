@@ -65,10 +65,7 @@ func (db *DataBlock) WriteBlock(disk *adf.Disk) error {
 func SplitFileData(data []byte) [][]byte {
 	var chunks [][]byte
 	for i := 0; i < len(data); i += OFSDataSize {
-		end := i + OFSDataSize
-		if end > len(data) {
-			end = len(data)
-		}
+		end := min(i+OFSDataSize, len(data))
 		chunk := make([]byte, end-i)
 		copy(chunk, data[i:end])
 		chunks = append(chunks, chunk)
