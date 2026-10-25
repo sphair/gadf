@@ -36,23 +36,6 @@ Or install directly:
 go install github.com/sphair/gadf/cmd/gadf@latest
 ```
 
-### Releases
-
-Releases are built from `v*` Git tags using GoReleaser. Each release includes
-prebuilt macOS (Apple Silicon and Intel), Linux (ARM64 and x86-64), and Windows
-(x86-64) archives, along with SHA-256 checksums. A Homebrew Cask is published
-to the [sphair/tap](https://github.com/sphair/homebrew-tap) tap for macOS.
-Because the binary is not signed or notarized, macOS may block it; if so, clear
-the quarantine attribute from the installed binary using the command shown by
-the Homebrew caveat.
-
-To enable publishing the Cask, add a `HOMEBREW_TAP_TOKEN` Actions secret to
-this repository. Use a fine-grained personal access token limited to
-`sphair/homebrew-tap` with Contents read/write permission. Add it under
-**Settings → Secrets and variables → Actions → Repository secrets**. Once
-configured, pushing a version tag (for example, `v1.0.2`) runs tests, builds
-and publishes the release archives, and updates the Cask.
-
 ## Usage
 
 ```bash
