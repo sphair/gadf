@@ -122,10 +122,11 @@ func TestAddFileEmptyDoesNotAllocateDataBlocks(t *testing.T) {
 		t.Fatalf("root hash entry for empty should not be zero")
 	}
 
-	block, err := b.disk.ReadBlock(int(headerBlock))
-	if err != nil {
-		t.Fatalf("ReadBlock failed: %v", err)
+	if headerBlock >= adf.TotalBlocks {
+		t.Fatalf("header block %d out of range", headerBlock)
 	}
+	offset := int(headerBlock) * adf.BlockSize
+	block := b.disk.Data[offset : offset+adf.BlockSize]
 
 	if got := adf.GetLong(block, adf.OffsetHighSeq); got != 0 {
 		t.Fatalf("high seq = %d, want 0 for empty file", got)

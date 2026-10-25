@@ -17,11 +17,6 @@ func TestBitmapAllocate(t *testing.T) {
 	if !bm.IsAllocated(2) {
 		t.Error("Block 2 should be allocated after Allocate()")
 	}
-
-	bm.Free(2)
-	if bm.IsAllocated(2) {
-		t.Error("Block 2 should be free after Free()")
-	}
 }
 
 func TestBitmapBootblockAlwaysAllocated(t *testing.T) {

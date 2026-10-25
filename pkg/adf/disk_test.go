@@ -1,12 +1,13 @@
 package adf
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"testing"
 )
 
-func TestReadWriteBlock(t *testing.T) {
+func TestWriteBlock(t *testing.T) {
 	disk := NewDisk()
 
 	testData := make([]byte, BlockSize)
@@ -18,10 +19,7 @@ func TestReadWriteBlock(t *testing.T) {
 		t.Fatalf("WriteBlock failed: %v", err)
 	}
 
-	readData, err := disk.ReadBlock(100)
-	if err != nil {
-		t.Fatalf("ReadBlock failed: %v", err)
-	}
+	readData := disk.Data[100*BlockSize : 101*BlockSize]
 
 	for i := range testData {
 		if readData[i] != testData[i] {
@@ -39,12 +37,6 @@ func TestBlockBoundaries(t *testing.T) {
 	}
 	if err := disk.WriteBlock(TotalBlocks, testData); err == nil {
 		t.Error("WriteBlock(TotalBlocks) should fail")
-	}
-	if _, err := disk.ReadBlock(-1); err == nil {
-		t.Error("ReadBlock(-1) should fail")
-	}
-	if _, err := disk.ReadBlock(TotalBlocks); err == nil {
-		t.Error("ReadBlock(TotalBlocks) should fail")
 	}
 
 	if err := disk.WriteBlock(0, testData); err != nil {
@@ -69,14 +61,16 @@ func TestWriteBlockSize(t *testing.T) {
 	}
 }
 
-func TestSaveLoad(t *testing.T) {
+func TestSave(t *testing.T) {
 	disk := NewDisk()
 
 	testData := make([]byte, BlockSize)
 	for i := range testData {
 		testData[i] = byte(i ^ 0xAA)
 	}
-	disk.WriteBlock(RootBlock, testData)
+	if err := disk.WriteBlock(RootBlock, testData); err != nil {
+		t.Fatalf("WriteBlock failed: %v", err)
+	}
 
 	tmpFile := filepath.Join(t.TempDir(), "test.adf")
 	if err := disk.Save(tmpFile); err != nil {
@@ -92,16 +86,12 @@ func TestSaveLoad(t *testing.T) {
 		t.Errorf("Saved file size = %d, want %d", info.Size(), DiskSize)
 	}
 
-	disk2 := NewDisk()
-	if err := disk2.Load(tmpFile); err != nil {
-		t.Fatalf("Load failed: %v", err)
+	savedData, err := os.ReadFile(tmpFile)
+	if err != nil {
+		t.Fatalf("ReadFile failed: %v", err)
 	}
-
-	readData, _ := disk2.ReadBlock(RootBlock)
-	for i := range testData {
-		if readData[i] != testData[i] {
-			t.Errorf("Loaded data mismatch at byte %d: got %d, want %d", i, readData[i], testData[i])
-		}
+	if !bytes.Equal(savedData, disk.Data[:]) {
+		t.Error("Saved data does not match disk image")
 	}
 }
 

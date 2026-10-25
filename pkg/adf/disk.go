@@ -15,17 +15,6 @@ func NewDisk() *Disk {
 	return &Disk{}
 }
 
-// ReadBlock reads a 512-byte block from the disk
-func (d *Disk) ReadBlock(blockNum int) ([]byte, error) {
-	if blockNum < 0 || blockNum >= TotalBlocks {
-		return nil, fmt.Errorf("block number %d out of range (0-%d)", blockNum, TotalBlocks-1)
-	}
-	offset := blockNum * BlockSize
-	block := make([]byte, BlockSize)
-	copy(block, d.Data[offset:offset+BlockSize])
-	return block, nil
-}
-
 // WriteBlock writes a 512-byte block to the disk
 func (d *Disk) WriteBlock(blockNum int, data []byte) error {
 	if blockNum < 0 || blockNum >= TotalBlocks {
@@ -52,17 +41,3 @@ func (d *Disk) WriteBootBlock(data []byte) error {
 func (d *Disk) Save(filename string) error {
 	return os.WriteFile(filename, d.Data[:], 0644)
 }
-
-// Load reads a disk image from a file
-func (d *Disk) Load(filename string) error {
-	data, err := os.ReadFile(filename)
-	if err != nil {
-		return err
-	}
-	if len(data) != DiskSize {
-		return fmt.Errorf("invalid ADF size: got %d bytes, expected %d", len(data), DiskSize)
-	}
-	copy(d.Data[:], data)
-	return nil
-}
-

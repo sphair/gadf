@@ -26,42 +26,22 @@ func TestGetPutLong(t *testing.T) {
 	}
 }
 
-func TestGetPutWord(t *testing.T) {
-	block := make([]byte, BlockSize)
-
-	PutWord(block, 0, 0xABCD)
-	if got := GetWord(block, 0); got != 0xABCD {
-		t.Errorf("GetWord(0) = 0x%X, want 0xABCD", got)
-	}
-
-	if block[0] != 0xAB || block[1] != 0xCD {
-		t.Errorf("Big-endian order wrong: got %X %X", block[0], block[1])
-	}
-}
-
-func TestPutGetBStr(t *testing.T) {
+func TestPutBStr(t *testing.T) {
 	block := make([]byte, BlockSize)
 
 	PutBStr(block, 0, 30, "Hello")
-	got := GetBStr(block, 0, 30)
-	if got != "Hello" {
-		t.Errorf("GetBStr = %q, want %q", got, "Hello")
-	}
-
-	if block[0] != 5 {
-		t.Errorf("BCPL length byte = %d, want 5", block[0])
+	if got := string(block[:6]); got != "\x05Hello" {
+		t.Errorf("BCPL string = %q, want %q", got, "\x05Hello")
 	}
 
 	longStr := "ThisIsAVeryLongStringThatExceedsTheMaximumLength"
 	PutBStr(block, 10, 10, longStr)
-	got = GetBStr(block, 10, 10)
-	if got != "ThisIsAVer" {
-		t.Errorf("Truncated GetBStr = %q, want %q", got, "ThisIsAVer")
+	if got := string(block[40:51]); got != "\x0aThisIsAVer" {
+		t.Errorf("Truncated BCPL string = %q, want %q", got, "\x0aThisIsAVer")
 	}
 
 	PutBStr(block, -20, 30, "AtEnd")
-	got = GetBStr(block, -20, 30)
-	if got != "AtEnd" {
-		t.Errorf("GetBStr(-20) = %q, want %q", got, "AtEnd")
+	if got := string(block[BlockSize-80 : BlockSize-74]); got != "\x05AtEnd" {
+		t.Errorf("BCPL string at negative index = %q, want %q", got, "\x05AtEnd")
 	}
 }

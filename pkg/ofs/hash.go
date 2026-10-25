@@ -21,30 +21,3 @@ func HashName(name string) int {
 
 	return h % HashTableSize
 }
-
-// IntlHashName calculates the hash using international character handling
-// This is used for INTL mode disks (not needed for basic OFS)
-func IntlHashName(name string) int {
-	h := len(name)
-
-	for _, c := range name {
-		uc := intlToUpper(c)
-		h = h * 13
-		h = h + int(uc)
-		h = h & 0x7FF
-	}
-
-	return h % HashTableSize
-}
-
-// intlToUpper converts a character to uppercase using Amiga international rules
-func intlToUpper(c rune) rune {
-	if c >= 'a' && c <= 'z' {
-		return c - ('a' - 'A')
-	}
-	// International characters (224-254, except 247 which is divide sign)
-	if c >= 224 && c <= 254 && c != 247 {
-		return c - 32
-	}
-	return c
-}

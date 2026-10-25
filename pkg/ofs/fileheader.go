@@ -38,16 +38,6 @@ func NewFileHeader(blockNum, parent uint32, name string, fileSize uint32) *FileH
 	}
 }
 
-// AddDataBlock adds a data block pointer to the file header
-// Returns false if the file header is full (need extension block)
-func (fh *FileHeader) AddDataBlock(blockNum uint32) bool {
-	if len(fh.DataBlocks) >= MaxDataBlocks {
-		return false
-	}
-	fh.DataBlocks = append(fh.DataBlocks, blockNum)
-	return true
-}
-
 // RequiredExtensionBlocks returns how many extension blocks are needed for n data blocks
 func RequiredExtensionBlocks(numDataBlocks int) int {
 	if numDataBlocks <= MaxDataBlocks {

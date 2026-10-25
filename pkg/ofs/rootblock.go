@@ -30,21 +30,6 @@ func NewRootBlock(name string, bitmapBlock uint32) *RootBlock {
 	}
 }
 
-// SetHashEntry sets a hash table entry
-func (rb *RootBlock) SetHashEntry(index int, blockNum uint32) {
-	if index >= 0 && index < HashTableSize {
-		rb.HashTable[index] = blockNum
-	}
-}
-
-// GetHashEntry gets a hash table entry
-func (rb *RootBlock) GetHashEntry(index int) uint32 {
-	if index >= 0 && index < HashTableSize {
-		return rb.HashTable[index]
-	}
-	return 0
-}
-
 // AddHashEntry adds an entry to the hash table and returns the previous entry (for chaining).
 // The caller should set the returned value as the new entry's HashChain.
 func (rb *RootBlock) AddHashEntry(name string, blockNum uint32) uint32 {

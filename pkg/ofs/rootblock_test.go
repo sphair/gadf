@@ -102,9 +102,9 @@ func TestRootBlockCreateBlock(t *testing.T) {
 		t.Errorf("Bitmap block = %d, want 881", got)
 	}
 
-	name := adf.GetBStr(block, adf.OffsetName, adf.MaxFilenameLen)
-	if name != "MyVolume" {
-		t.Errorf("Name = %s, want MyVolume", name)
+	nameOffset := adf.BlockSize + adf.OffsetName*4
+	if got := string(block[nameOffset : nameOffset+9]); got != "\x08MyVolume" {
+		t.Errorf("BCPL name = %q, want %q", got, "\x08MyVolume")
 	}
 
 	if got := adf.GetLong(block, adf.OffsetSecondaryType); got != adf.STRoot {

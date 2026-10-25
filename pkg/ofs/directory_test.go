@@ -37,9 +37,9 @@ func TestDirBlockCreateBlock(t *testing.T) {
 		t.Errorf("Protection = 0x%X, want 0x0F", got)
 	}
 
-	name := adf.GetBStr(block, adf.OffsetName, adf.MaxFilenameLen)
-	if name != "TestDir" {
-		t.Errorf("Name = %s, want TestDir", name)
+	nameOffset := adf.BlockSize + adf.OffsetName*4
+	if got := string(block[nameOffset : nameOffset+8]); got != "\x07TestDir" {
+		t.Errorf("BCPL name = %q, want %q", got, "\x07TestDir")
 	}
 
 	if got := adf.GetLong(block, adf.OffsetNextHash); got != 99 {

@@ -53,15 +53,6 @@ func (bm *Bitmap) Allocate(blockNum int) {
 	bm.blocks[idx] &^= (1 << bit)
 }
 
-// Free marks a block as free
-func (bm *Bitmap) Free(blockNum int) {
-	if blockNum < adf.ReservedBlocks || blockNum >= adf.TotalBlocks {
-		return
-	}
-	idx, bit := blockToBitmapPos(blockNum)
-	bm.blocks[idx] |= (1 << bit)
-}
-
 // AllocateNext finds and allocates the next free block
 // Returns -1 if no free blocks available
 // AllocateNext finds next free block via linear search.

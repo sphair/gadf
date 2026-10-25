@@ -28,21 +28,6 @@ func NewDirBlock(blockNum, parent uint32, name string) *DirBlock {
 	}
 }
 
-// SetHashEntry sets a hash table entry
-func (db *DirBlock) SetHashEntry(index int, blockNum uint32) {
-	if index >= 0 && index < HashTableSize {
-		db.HashTable[index] = blockNum
-	}
-}
-
-// GetHashEntry gets a hash table entry
-func (db *DirBlock) GetHashEntry(index int) uint32 {
-	if index >= 0 && index < HashTableSize {
-		return db.HashTable[index]
-	}
-	return 0
-}
-
 // AddHashEntry adds an entry to the hash table and returns the previous entry (for chaining).
 // The caller should set the returned value as the new entry's HashChain.
 func (db *DirBlock) AddHashEntry(name string, blockNum uint32) uint32 {
